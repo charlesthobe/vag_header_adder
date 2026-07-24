@@ -116,11 +116,7 @@ int main(int argc, char** argv) {
 	std::ifstream input_handle{input, std::ios::binary};
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
-	if (header.magic[3] == 'i') {
-		header.channel_size = std::filesystem::file_size(input) / 2;
-	} else {
-		header.channel_size = std::filesystem::file_size(input);
-	}
+	auto input_size = std::filesystem::file_size(input);
 
 	// Determine padding
 	size_t padding_size = 0x10;
@@ -131,11 +127,22 @@ int main(int argc, char** argv) {
 	input_handle.seekg(0, std::ios::beg);
 	if (buff1 != 0 || buff2 != 0) {
 		padding_size -= 0x10;
+	} else {
+		input_size += 0x10;
 	}
 	if (header.magic[3] == 'i') {
-		padding_size += 0x800 - 0x30;
+		padding_size += 0x800 - 0x40;
+		// In psxavenc size counting begins with the beginning of data (after the padding) with VAGi
+		input_size -= 0x10;
 	}
 	std::vector<char>padding_buffer(padding_size, 0);
+
+
+	if (header.magic[3] == 'i') {
+		header.channel_size = input_size / 2;
+	} else {
+		header.channel_size = input_size;
+	}
 
 	// Correct endianness
 	header.version = std::byteswap(header.version);
