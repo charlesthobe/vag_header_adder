@@ -180,7 +180,7 @@ int main(int argc, char** argv) {
 	std::vector<char>padding_buffer(padding_size, 0);
 
 
-	if (header.magic[3] == 'i') {
+	if (header.magic[3] == 'i' || header.magic[3] == '2') {
 		header.channel_size = input_size / 2;
 	} else {
 		header.channel_size = input_size;
