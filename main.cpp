@@ -29,13 +29,13 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 
 #pragma pack(1)
 struct vag_header {
-	char magic[4]; // 0
-	uint32_t version; // 4
-	uint32_t interleave; // 8
-	uint32_t channel_size; // 12
-	uint32_t sample_rate; // 16
-	char reserved[12]; // 20
-	char name[16]; // 32
+	char magic[4] = {'V', 'A', 'G', 'p'};
+	uint32_t version = 0x20;
+	uint32_t interleave = 0; // Little-endian unlike the reset
+	uint32_t channel_size = 0;
+	uint32_t sample_rate = 44100;
+	char reserved[12] = {};
+	char name[16] = {};
 };
 #pragma pack()
 
@@ -45,15 +45,7 @@ int main(int argc, char** argv) {
 	const char* output = nullptr;
 	bool force_flag = false;
 
-	vag_header header{
-		{'V', 'A', 'G', 'p'},
-		0x20,
-		0,
-		0,
-		44100,
-		{},
-		{}
-	};
+	vag_header header;
 
 	try {
 		for (int i =1; i < argc; ++i) {
