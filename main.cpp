@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
 			}
 
 			if (!std::strcmp(argv[i], "--type") || !std::strcmp(argv[i], "-t")) {
-				if (*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i' && argv[i + 1][1] == 0 ) {
+				if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
 					if (header.magic[3] == 'i') {
 						header.interleave = std::stoi(argv[++i], nullptr, 0);
