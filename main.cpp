@@ -10,17 +10,20 @@
 #include <vector>
 
 void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
-	printf("Usage: {} <options>\n"
+	std::print("Usage: {0} <options>\n"
 		"Options:\n"
-		"  -i, --input <file>			Headerless VAG file (Required)\n"
-		"  -o, --output <file>			Output VAG file (Required)\n"
-		"  -t, --type <type>			Type of magic \"VAG(?)\", valid values: p (default), 1, 2, i\n"
-		"  --interleave <bytes>			Interleave size in bytes (Required when type is set to \"i\")\n"
-		"  -sr, --sample_rate <hz>		Sample rate (Default: 44100)\n"
-		"  -n, --name <track_name>		Track name (Max 16 chars)\n"
-		"  -v, --version <ver>			Header version (Default: 32 / 0x20)\n"
-		"  --force, -f					Overwrite output file if it exists\n"
-		"  -h, --help					Show this help message\n", prog_name);
+		"  -i, --input <file>                           Headerless VAG file (Required)\n"
+		"  -o, --output <file>                          Output VAG file (Required)\n"
+		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2, i\n"
+		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100)\n"
+		"  -n, --name <track_name>                      Track name (Max 16 chars)\n"
+		"  -v, --version <ver>                          Header version (Default: 32 / 0x20)\n"
+		"  --force, -f                                  Overwrite output file if it exists\n"
+		"  -h, --help                                   Show this help message\n\n"
+		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t i 0x18000\n"
+		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t 2\n"
+		"e.g:\n    {0} -i in.vab -o out.vag\n"
+		, prog_name);
 	std::exit(status);
 }
 
@@ -70,13 +73,14 @@ int main(int argc, char** argv) {
 			if (!std::strcmp(argv[i], "--type") || !std::strcmp(argv[i], "-t")) {
 				if (*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i' && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
+					if (header.magic[3] == 'i') {
+						header.interleave = std::stoi(argv[++i], nullptr, 0);
+					}
 				} else {
 					print_help(*argv, EXIT_FAILURE);
 				}
 			} else if (!std::strcmp(argv[i], "--version") || !std::strcmp(argv[i], "-v")) {
 				header.version = std::stoi(argv[++i], nullptr, 0);
-			} else if (!std::strcmp(argv[i], "--interleave")) {
-				header.interleave = std::stoi(argv[++i], nullptr, 0);
 			} else if (!std::strcmp(argv[i], "--sample_rate") || !std::strcmp(argv[i], "-sr")) {
 				header.sample_rate = std::stoi(argv[++i], nullptr, 0);
 			} else if (!std::strcmp(argv[i], "--name") || !std::strcmp(argv[i], "-n")) {
