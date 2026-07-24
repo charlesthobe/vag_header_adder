@@ -15,7 +15,7 @@ void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
 		"  -i, --input <file>			Headerless VAG file (Required)\n"
 		"  -o, --output <file>			Output VAG file (Required)\n"
 		"  -t, --type <type>			Type of magic \"VAG(?)\", valid values: p (default), 1, 2, i\n"
-		"  --interleave <bytes>			Interleave size in bytes (Required for 'i' id)\n"
+		"  --interleave <bytes>			Interleave size in bytes (Required when type is set to \"i\")\n"
 		"  -sr, --sample_rate <hz>		Sample rate (Default: 44100)\n"
 		"  -n, --name <track_name>		Track name (Max 16 chars)\n"
 		"  -v, --version <ver>			Header version (Default: 32 / 0x20)\n"
