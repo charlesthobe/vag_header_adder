@@ -24,7 +24,7 @@ void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
 	std::exit(status);
 }
 
-#pragma pack(push, 1)
+#pragma pack(1)
 struct vag_header {
 	char magic[4]; // 0
 	uint32_t version; // 4
@@ -34,7 +34,7 @@ struct vag_header {
 	char reserved[12]; // 20
 	char name[16]; // 32
 };
-#pragma pack(pop)
+#pragma pack()
 
 int main(int argc, char** argv) {
 
