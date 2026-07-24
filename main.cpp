@@ -1,7 +1,8 @@
+#include <algorithm>
 #include <bit>
-#include <cstring>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -12,14 +13,16 @@
 void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 	std::print("Usage: {0} <options>\n"
 		"Options:\n"
-		"  -i, --input <file>                           Headerless VAG file (Required)\n"
-		"  -o, --output <file>                          Output VAG file (Required)\n"
-		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2, i\n"
-		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100)\n"
-		"  -n, --name <track_name>                      Track name (Max 16 chars)\n"
-		"  -v, --version <ver>                          Header version (Default: 32 / 0x20)\n"
-		"  --force, -f                                  Overwrite output file if it exists\n"
+		"  -i, --input <file>                           Headerless VAG file (Required).\n"
+		"  -o, --output <file>                          Output VAG file (Required).\n"
+		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
+		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100).\n"
+		"  -n, --name <track_name>                      Track name (Max 16 chars).\n"
+		"  -v, --version <ver>                          Header version (Default: 32 / 0x20).\n"
+		"  --yes, -y                                    Overwrite output file if it exists without prompting.\n"
+		"  --force, -f                                  Ignores non-critical errors without prompting.\n"
 		"  -h, --help                                   Show this help message\n\n"
+		"Note: if you really don't want to prompted at all you must combine --force/-f with --yes/-y\n\n"
 		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t i 0x18000\n"
 		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t 2\n"
 		"e.g:\n    {0} -i in.vab -o out.vag\n"
@@ -43,13 +46,19 @@ int main(int argc, char** argv) {
 
 	const char* input = nullptr;
 	const char* output = nullptr;
+	bool overwrite_flag = false;
 	bool force_flag = false;
+	std::string line_buffer;
 
 	vag_header header;
 
 	try {
 		for (int i =1; i < argc; ++i) {
 			if (*argv[i] == '-' && i + 1 == argc || *argv[i] != '-') {
+				if (!std::strcmp(argv[i], "--yes") || !std::strcmp(argv[i], "-y")) {
+					overwrite_flag = true;
+					continue;
+				}
 				if (!std::strcmp(argv[i], "--force") || !std::strcmp(argv[i], "-f")) {
 					force_flag = true;
 					continue;
@@ -101,24 +110,32 @@ int main(int argc, char** argv) {
 		print_help(*argv);
 	}
 
-	if (std::filesystem::exists(output) && !force_flag) {
-		printf("Output file: \"%s\" exists, do you want to replace it? [y/N]:", output);
-		if (std::tolower(std::getchar()) == 'y') {
-			force_flag = true;
+	if (std::filesystem::exists(output) && !overwrite_flag) {
+		std::print("Output file: \"{}\" exists, do you want to replace it? [y/N]: ", output);
+		std::getline(std::cin, line_buffer);
+		std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
+		if (line_buffer != "y") {
+			return EXIT_FAILURE;
 		}
 		std::cout << std::endl;
 	}
 
 	std::ifstream input_handle{input, std::ios::binary};
-	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
 	auto input_size = std::filesystem::file_size(input);
 	if (input_size % 0x10) {
-		std::print("Input file \"{}\" is potentially invalid\n"
+		std::print("Warning: Input file \"{}\" is potentially invalid\n"
 			"Size of input file is: {} which is not divisble by 16\n"
 			"File sizes should be divisible by 16 due to 16 byte alignment of vag format.\n"
-			"proceeding anyway...\n"
 			, input, input_size);
+		if (!force_flag) {
+			std::print("Do you still want to proceed? [y/N]: ");
+			std::getline(std::cin, line_buffer);
+			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
+			if (line_buffer != "y") {
+				return EXIT_FAILURE;
+			}
+		}
 	}
 	if (input_size < 0x10) {
 		std::print("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
@@ -135,6 +152,15 @@ int main(int argc, char** argv) {
 	if (buff1 == 0 && buff2 == 0) {
 		padding_size = 0;
 	} else {
+		std::print("Input file: \"{}\" could be invalid because it doesn't have padding.\n", input);
+		if (!force_flag) {
+			std::print("Do you still want to proceed? [y/N]: ", input);
+			std::getline(std::cin, line_buffer);
+			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
+			if (line_buffer != "y") {
+				return EXIT_FAILURE;
+			}
+		}
 		padding_size = 0x10;
 		input_size += 0x10;
 	}
@@ -154,6 +180,8 @@ int main(int argc, char** argv) {
 	header.version = std::byteswap(header.version);
 	header.channel_size = std::byteswap(header.channel_size);
 	header.sample_rate = std::byteswap(header.sample_rate);
+
+	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
 	output_handle.write(reinterpret_cast<const char*>(&header), sizeof(header));
 	output_handle.write(padding_buffer.data(), padding_buffer.size());
