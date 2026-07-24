@@ -119,19 +119,20 @@ int main(int argc, char** argv) {
 	auto input_size = std::filesystem::file_size(input);
 
 	// Determine padding
-	size_t padding_size = 0x10;
+	size_t padding_size;
 	uint64_t buff1;
 	uint64_t buff2;
 	input_handle.read(reinterpret_cast<char*>(&buff1), 8);
 	input_handle.read(reinterpret_cast<char*>(&buff2), 8);
 	input_handle.seekg(0, std::ios::beg);
-	if (buff1 != 0 || buff2 != 0) {
-		padding_size -= 0x10;
+	if (buff1 == 0 && buff2 == 0) {
+		padding_size = 0;
 	} else {
+		padding_size = 0x10;
 		input_size += 0x10;
 	}
 	if (header.magic[3] == 'i') {
-		padding_size += 0x800 - 0x40;
+		padding_size += 0x800 - 0x30;
 		// In psxavenc size counting begins with the beginning of data (after the padding) with VAGi
 		input_size -= 0x10;
 	}
