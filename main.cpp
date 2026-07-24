@@ -17,12 +17,14 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 		"  -o, --output <file>                          Output VAG file (Required).\n"
 		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
 		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100).\n"
-		"  -n, --name <track_name>                      Track name (Max 16 chars).\n"
+		"  --name <track_name>                          Track name (Max 16 chars).\n"
 		"  -v, --version <ver>                          Header version (Default: 32 / 0x20).\n"
 		"  --yes, -y                                    Overwrite output file if it exists without prompting.\n"
+		"  --no, -n                                     Do not overwrite output file if it exists.\n"
 		"  --force, -f                                  Ignores non-critical errors without prompting.\n"
-		"  -h, --help                                   Show this help message\n\n"
-		"Note: if you really don't want to prompted at all you must combine --force/-f with --yes/-y\n\n"
+		"  --no-force, -nf                              Do not proceed when non-critical errors are met.\n"
+		"  -h, --help                                   Show this help message.\n\n"
+		"Note: if you really don't want to be prompted at all you must combine either --yes/-y or --no/-n with either --force/-f or --no-force/-nf\n\n"
 		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t i 0x18000\n"
 		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t 2\n"
 		"e.g:\n    {0} -i in.vab -o out.vag\n"
@@ -44,10 +46,16 @@ struct vag_header {
 
 int main(int argc, char** argv) {
 
+	enum {
+		UNSET,
+		YES,
+		NO
+	};
+
 	const char* input = nullptr;
 	const char* output = nullptr;
-	bool overwrite_flag = false;
-	bool force_flag = false;
+	int overwrite_flag = UNSET;
+	int force_flag = UNSET;
 	std::string line_buffer;
 
 	vag_header header;
@@ -56,11 +64,19 @@ int main(int argc, char** argv) {
 		for (int i =1; i < argc; ++i) {
 			if (*argv[i] == '-' && i + 1 == argc || *argv[i] != '-') {
 				if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
-					overwrite_flag = true;
+					overwrite_flag = YES;
+					continue;
+				}
+				if (std::string_view{argv[i]} == "--no" || std::string_view{argv[i]} == "-n") {
+					overwrite_flag = NO;
 					continue;
 				}
 				if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
-					force_flag = true;
+					force_flag = YES;
+					continue;
+				}
+				if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
+					force_flag = NO;
 					continue;
 				}
 				print_help(*argv);
@@ -84,7 +100,7 @@ int main(int argc, char** argv) {
 				header.version = std::stoi(argv[++i], nullptr, 0);
 			} else if (std::string_view{argv[i]} == "--sample_rate" || std::string_view{argv[i]} == "-sr") {
 				header.sample_rate = std::stoi(argv[++i], nullptr, 0);
-			} else if (std::string_view{argv[i]} == "--name" || std::string_view{argv[i]} == "-n") {
+			} else if (std::string_view{argv[i]} == "--name") {
 				if (std::strlen(argv[i + 1]) <= 16) {
 					std::strcpy(header.name, argv[++i]);
 				} else {
@@ -122,13 +138,15 @@ int main(int argc, char** argv) {
 			"Size of input file is: {} which is not divisble by 16\n"
 			"File sizes should be divisible by 16 due to 16 byte alignment of vag format.\n"
 			, input, input_size);
-		if (!force_flag) {
+		if (force_flag == UNSET) {
 			std::print("Do you still want to proceed? [y/N]: ");
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
 				return EXIT_FAILURE;
 			}
+		} else if (force_flag == NO) {
+			return EXIT_FAILURE;
 		}
 	}
 
@@ -143,13 +161,15 @@ int main(int argc, char** argv) {
 		padding_size = 0;
 	} else {
 		std::print("Input file: \"{}\" could be invalid because it doesn't have padding.\n", input);
-		if (!force_flag) {
+		if (force_flag == UNSET) {
 			std::print("Do you still want to proceed? [y/N]: ", input);
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
 				return EXIT_FAILURE;
 			}
+		} else if (force_flag == NO) {
+			return EXIT_FAILURE;
 		}
 		padding_size = 0x10;
 		input_size += 0x10;
@@ -171,11 +191,16 @@ int main(int argc, char** argv) {
 	header.channel_size = std::byteswap(header.channel_size);
 	header.sample_rate = std::byteswap(header.sample_rate);
 
-	if (std::filesystem::exists(output) && !overwrite_flag) {
-		std::print("Output file: \"{}\" exists, do you want to replace it? [y/N]: ", output);
-		std::getline(std::cin, line_buffer);
-		std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
-		if (line_buffer != "y") {
+	if (std::filesystem::exists(output)) {
+		std::print("Output file: \"{}\" exists\n", output);
+		if (overwrite_flag == UNSET) {
+			std::print("Do you want to replace it? [y/N]: ");
+			std::getline(std::cin, line_buffer);
+			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
+			if (line_buffer != "y") {
+				return EXIT_FAILURE;
+			}
+		} else if (overwrite_flag == NO) {
 			return EXIT_FAILURE;
 		}
 	}
