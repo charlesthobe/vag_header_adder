@@ -14,7 +14,7 @@ void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
 		"Options:\n"
 		"  -i, --input <file>			Headerless VAG file (Required)\n"
 		"  -o, --output <file>			Output VAG file (Required)\n"
-		"  --id <id>					magic VAG(?), valid values: p (default), 1, 2, i\n"
+		"  -t, --type <type>			Type of magic \"VAG(?)\", valid values: p (default), 1, 2, i\n"
 		"  --interleave <bytes>			Interleave size in bytes (Required for 'i' id)\n"
 		"  -sr, --sample_rate <hz>		Sample rate (Default: 44100)\n"
 		"  -n, --name <track_name>		Track name (Max 16 chars)\n"
@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
 				return 0;
 			}
 
-			if (!std::strcmp(argv[i], "--id")) {
+			if (!std::strcmp(argv[i], "--type") || !std::strcmp(argv[i], "-t")) {
 				if (*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i' && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
 				} else {
