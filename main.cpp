@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
+void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 	std::print("Usage: {0} <options>\n"
 		"Options:\n"
 		"  -i, --input <file>                           Headerless VAG file (Required)\n"
@@ -62,11 +62,11 @@ int main(int argc, char** argv) {
 					force_flag = true;
 					continue;
 				}
-				print_help(*argv, EXIT_FAILURE);
+				print_help(*argv);
 			}
 
 			if (!std::strcmp(argv[i], "--help") || !std::strcmp(argv[i], "-h")) {
-				print_help(*argv);
+				print_help(*argv, EXIT_SUCCESS);
 				return 0;
 			}
 
@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 						header.interleave = std::stoi(argv[++i], nullptr, 0);
 					}
 				} else {
-					print_help(*argv, EXIT_FAILURE);
+					print_help(*argv);
 				}
 			} else if (!std::strcmp(argv[i], "--version") || !std::strcmp(argv[i], "-v")) {
 				header.version = std::stoi(argv[++i], nullptr, 0);
@@ -87,26 +87,26 @@ int main(int argc, char** argv) {
 				if (std::strlen(argv[i + 1]) <= 16) {
 					std::strcpy(header.name, argv[++i]);
 				} else {
-					print_help(*argv, EXIT_FAILURE);
+					print_help(*argv);
 				}
 			} else if (!std::strcmp(argv[i], "--input") || !std::strcmp(argv[i], "-i")) {
 				input = argv[++i];
 			} else if (!std::strcmp(argv[i], "--output") || !std::strcmp(argv[i], "-o")) {
 				output = argv[++i];
 			} else {
-				print_help(*argv, EXIT_FAILURE);
+				print_help(*argv);
 			}
 		}
 	}
 	catch (...) {
-		print_help(*argv, EXIT_FAILURE);
+		print_help(*argv);
 	}
 	if (header.magic[3] == 'i' && header.interleave == 0) {
-		print_help(*argv, EXIT_FAILURE);
+		print_help(*argv);
 	}
 
 	if (!input || !output) {
-		print_help(*argv, EXIT_FAILURE);
+		print_help(*argv);
 	}
 
 	if (std::filesystem::exists(output) && !force_flag) {
