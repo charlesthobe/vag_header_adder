@@ -8,6 +8,7 @@
 #include <iostream>
 #include <print>
 #include <string>
+#include <string_view>
 #include <vector>
 
 void print_help(const char* prog_name, int status = EXIT_FAILURE) {
@@ -55,23 +56,23 @@ int main(int argc, char** argv) {
 	try {
 		for (int i =1; i < argc; ++i) {
 			if (*argv[i] == '-' && i + 1 == argc || *argv[i] != '-') {
-				if (!std::strcmp(argv[i], "--yes") || !std::strcmp(argv[i], "-y")) {
+				if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
 					overwrite_flag = true;
 					continue;
 				}
-				if (!std::strcmp(argv[i], "--force") || !std::strcmp(argv[i], "-f")) {
+				if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
 					force_flag = true;
 					continue;
 				}
 				print_help(*argv);
 			}
 
-			if (!std::strcmp(argv[i], "--help") || !std::strcmp(argv[i], "-h")) {
+			if (std::string_view{argv[i]} == "--help" || std::string_view{argv[i]} == "-h") {
 				print_help(*argv, EXIT_SUCCESS);
 				return 0;
 			}
 
-			if (!std::strcmp(argv[i], "--type") || !std::strcmp(argv[i], "-t")) {
+			if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
 				if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
 					if (header.magic[3] == 'i') {
@@ -80,19 +81,19 @@ int main(int argc, char** argv) {
 				} else {
 					print_help(*argv);
 				}
-			} else if (!std::strcmp(argv[i], "--version") || !std::strcmp(argv[i], "-v")) {
+			} else if (std::string_view{argv[i]} == "--version" || std::string_view{argv[i]} == "-v") {
 				header.version = std::stoi(argv[++i], nullptr, 0);
-			} else if (!std::strcmp(argv[i], "--sample_rate") || !std::strcmp(argv[i], "-sr")) {
+			} else if (std::string_view{argv[i]} == "--sample_rate" || std::string_view{argv[i]} == "-sr") {
 				header.sample_rate = std::stoi(argv[++i], nullptr, 0);
-			} else if (!std::strcmp(argv[i], "--name") || !std::strcmp(argv[i], "-n")) {
+			} else if (std::string_view{argv[i]} == "--name" || std::string_view{argv[i]} == "-n") {
 				if (std::strlen(argv[i + 1]) <= 16) {
 					std::strcpy(header.name, argv[++i]);
 				} else {
 					print_help(*argv);
 				}
-			} else if (!std::strcmp(argv[i], "--input") || !std::strcmp(argv[i], "-i")) {
+			} else if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
 				input = argv[++i];
-			} else if (!std::strcmp(argv[i], "--output") || !std::strcmp(argv[i], "-o")) {
+			} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
 				output = argv[++i];
 			} else {
 				print_help(*argv);
