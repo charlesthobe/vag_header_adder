@@ -7,6 +7,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
 	printf("Usage: %s <options>\n"
@@ -113,7 +114,7 @@ int main(int argc, char** argv) {
 	}
 
 	std::ifstream input_handle{input, std::ios::binary};
-	std::ofstream output_handle{output, std::ios::binary};
+	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
 	if (header.magic[3] == 'i') {
 		header.channel_size = std::filesystem::file_size(input) / 2;
@@ -121,11 +122,27 @@ int main(int argc, char** argv) {
 		header.channel_size = std::filesystem::file_size(input);
 	}
 
+	// Determine padding
+	size_t padding_size = 0x10;
+	uint64_t buff1;
+	uint64_t buff2;
+	input_handle.read(reinterpret_cast<char*>(&buff1), 8);
+	input_handle.read(reinterpret_cast<char*>(&buff2), 8);
+	input_handle.seekg(0, std::ios::beg);
+	if (buff1 != 0 || buff2 != 0) {
+		padding_size -= 0x10;
+	}
+	if (header.magic[3] == 'i') {
+		padding_size += 0x800 - 0x30;
+	}
+	std::vector<char>padding_buffer(padding_size, 0);
+
 	// Correct endianness
 	header.version = std::byteswap(header.version);
 	header.channel_size = std::byteswap(header.channel_size);
 	header.sample_rate = std::byteswap(header.sample_rate);
 
 	output_handle.write(reinterpret_cast<const char*>(&header), sizeof(header));
+	output_handle.write(padding_buffer.data(), padding_buffer.size());
 	output_handle << input_handle.rdbuf();
 }
