@@ -133,8 +133,6 @@ int main(int argc, char** argv) {
 	}
 	if (header.magic[3] == 'i') {
 		padding_size += 0x800 - 0x30;
-		// In psxavenc size counting begins with the beginning of data (after the padding) with VAGi
-		input_size -= 0x10;
 	}
 	std::vector<char>padding_buffer(padding_size, 0);
 
