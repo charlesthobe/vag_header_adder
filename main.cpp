@@ -69,35 +69,26 @@ int main(int argc, char** argv) {
 			if (!std::strcmp(argv[i], "--id")) {
 				if (*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i' && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
-				}
-				else {
+				} else {
 					print_help(*argv, EXIT_FAILURE);
 				}
-			}
-			else if (!std::strcmp(argv[i], "--version") || !std::strcmp(argv[i], "-v")) {
+			} else if (!std::strcmp(argv[i], "--version") || !std::strcmp(argv[i], "-v")) {
 				header.version = std::stoi(argv[++i], nullptr, 0);
-			}
-			else if (!std::strcmp(argv[i], "--interleave")) {
+			} else if (!std::strcmp(argv[i], "--interleave")) {
 				header.interleave = std::stoi(argv[++i], nullptr, 0);
-			}
-			else if (!std::strcmp(argv[i], "--sample_rate") || !std::strcmp(argv[i], "-sr")) {
+			} else if (!std::strcmp(argv[i], "--sample_rate") || !std::strcmp(argv[i], "-sr")) {
 				header.sample_rate = std::stoi(argv[++i], nullptr, 0);
-			}
-			else if (!std::strcmp(argv[i], "--name") || !std::strcmp(argv[i], "-n")) {
+			} else if (!std::strcmp(argv[i], "--name") || !std::strcmp(argv[i], "-n")) {
 				if (std::strlen(argv[i + 1]) <= 16) {
 					std::strcpy(header.name, argv[++i]);
-				}
-				else {
+				} else {
 					print_help(*argv, EXIT_FAILURE);
 				}
-			}
-			else if (!std::strcmp(argv[i], "--input") || !std::strcmp(argv[i], "-i")) {
+			} else if (!std::strcmp(argv[i], "--input") || !std::strcmp(argv[i], "-i")) {
 				input = argv[++i];
-			}
-			else if (!std::strcmp(argv[i], "--output") || !std::strcmp(argv[i], "-o")) {
+			} else if (!std::strcmp(argv[i], "--output") || !std::strcmp(argv[i], "-o")) {
 				output = argv[++i];
-			}
-			else {
+			} else {
 				print_help(*argv, EXIT_FAILURE);
 			}
 		}
@@ -126,8 +117,7 @@ int main(int argc, char** argv) {
 
 	if (header.magic[3] == 'i') {
 		header.channel_size = std::filesystem::file_size(input) / 2;
-	}
-	else {
+	} else {
 		header.channel_size = std::filesystem::file_size(input);
 	}
 
