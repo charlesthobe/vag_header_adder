@@ -19,7 +19,7 @@ void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
 		"  -sr, --sample_rate <hz>		Sample rate (Default: 44100)\n"
 		"  -n, --name <track_name>		Track name (Max 16 chars)\n"
 		"  -v, --version <ver>			Header version (Default: 32 / 0x20)\n"
-		"  --force						Overwrite output file if it exists\n"
+		"  --force, -f					Overwrite output file if it exists\n"
 		"  -h, --help					Show this help message\n", prog_name);
 	std::exit(status);
 }
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
 	try {
 		for (int i =1; i < argc; ++i) {
 			if (*argv[i] == '-' && i + 1 == argc || *argv[i] != '-') {
-				if (!std::strcmp(argv[i], "--force")) {
+				if (!std::strcmp(argv[i], "--force") || !std::strcmp(argv[i], "-f")) {
 					force_flag = true;
 					continue;
 				}
