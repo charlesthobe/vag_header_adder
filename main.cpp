@@ -1,16 +1,16 @@
 #include <bit>
 #include <cstring>
-#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <print>
 #include <string>
 #include <vector>
 
 void print_help(const char* prog_name, int status = EXIT_SUCCESS) {
-	printf("Usage: %s <options>\n"
+	printf("Usage: {} <options>\n"
 		"Options:\n"
 		"  -i, --input <file>			Headerless VAG file (Required)\n"
 		"  -o, --output <file>			Output VAG file (Required)\n"
@@ -117,6 +117,17 @@ int main(int argc, char** argv) {
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
 	auto input_size = std::filesystem::file_size(input);
+	if (input_size % 0x10) {
+		std::print("Input file \"{}\" is potentially invalid\n"
+			"Size of input file is: {} which is not divisble by 16\n"
+			"File sizes should be divisible by 16 due to 16 byte alignment of vag format.\n"
+			"proceeding anyway...\n"
+			, input, input_size);
+	}
+	if (input_size < 0x10) {
+		std::print("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
+		return EXIT_FAILURE;
+	}
 
 	// Determine padding
 	size_t padding_size;
