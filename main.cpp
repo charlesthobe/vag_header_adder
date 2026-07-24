@@ -110,19 +110,13 @@ int main(int argc, char** argv) {
 		print_help(*argv);
 	}
 
-	if (std::filesystem::exists(output) && !overwrite_flag) {
-		std::print("Output file: \"{}\" exists, do you want to replace it? [y/N]: ", output);
-		std::getline(std::cin, line_buffer);
-		std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
-		if (line_buffer != "y") {
-			return EXIT_FAILURE;
-		}
-		std::cout << std::endl;
-	}
-
 	std::ifstream input_handle{input, std::ios::binary};
 
 	auto input_size = std::filesystem::file_size(input);
+	if (input_size < 0x10) {
+		std::print("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
+		return EXIT_FAILURE;
+	}
 	if (input_size % 0x10) {
 		std::print("Warning: Input file \"{}\" is potentially invalid\n"
 			"Size of input file is: {} which is not divisble by 16\n"
@@ -136,10 +130,6 @@ int main(int argc, char** argv) {
 				return EXIT_FAILURE;
 			}
 		}
-	}
-	if (input_size < 0x10) {
-		std::print("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
-		return EXIT_FAILURE;
 	}
 
 	// Determine padding
@@ -180,6 +170,15 @@ int main(int argc, char** argv) {
 	header.version = std::byteswap(header.version);
 	header.channel_size = std::byteswap(header.channel_size);
 	header.sample_rate = std::byteswap(header.sample_rate);
+
+	if (std::filesystem::exists(output) && !overwrite_flag) {
+		std::print("Output file: \"{}\" exists, do you want to replace it? [y/N]: ", output);
+		std::getline(std::cin, line_buffer);
+		std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
+		if (line_buffer != "y") {
+			return EXIT_FAILURE;
+		}
+	}
 
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
