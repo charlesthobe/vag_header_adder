@@ -187,9 +187,13 @@ int main(int argc, char** argv) {
 	}
 
 	// Correct endianness
-	header.version = std::byteswap(header.version);
-	header.channel_size = std::byteswap(header.channel_size);
-	header.sample_rate = std::byteswap(header.sample_rate);
+	if constexpr (std::endian::native == std::endian::little) {
+		header.version = std::byteswap(header.version);
+		header.channel_size = std::byteswap(header.channel_size);
+		header.sample_rate = std::byteswap(header.sample_rate);
+	} else if constexpr (std::endian::native == std::endian::big) {
+		header.interleave = std::byteswap(header.interleave);
+	}
 
 	if (std::filesystem::exists(output)) {
 		std::print("Output file: \"{}\" exists\n", output);
