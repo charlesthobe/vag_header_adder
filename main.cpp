@@ -62,29 +62,32 @@ int main(int argc, char** argv) {
 
 	try {
 		for (int i =1; i < argc; ++i) {
-			if (*argv[i] == '-' && i + 1 == argc || *argv[i] != '-') {
-				if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
-					overwrite_flag = YES;
-					continue;
-				}
-				if (std::string_view{argv[i]} == "--no" || std::string_view{argv[i]} == "-n") {
-					overwrite_flag = NO;
-					continue;
-				}
-				if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
-					force_flag = YES;
-					continue;
-				}
-				if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
-					force_flag = NO;
-					continue;
-				}
+			if (*argv[i] != '-') {
 				print_help(*argv);
 			}
 
+			if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
+				overwrite_flag = YES;
+				continue;
+			}
+			if (std::string_view{argv[i]} == "--no" || std::string_view{argv[i]} == "-n") {
+				overwrite_flag = NO;
+				continue;
+			}
+			if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
+				force_flag = YES;
+				continue;
+			}
+			if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
+				force_flag = NO;
+				continue;
+			}
 			if (std::string_view{argv[i]} == "--help" || std::string_view{argv[i]} == "-h") {
 				print_help(*argv, EXIT_SUCCESS);
-				return 0;
+			}
+
+			if (i == argc - 1) {
+				print_help(*argv);
 			}
 
 			if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
@@ -95,7 +98,11 @@ int main(int argc, char** argv) {
 				if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
 					if (header.magic[3] == 'i') {
-						header.interleave = std::stoi(argv[++i], nullptr, 0);
+						if (i == argc - 1) {
+							print_help(*argv);
+						} else {
+							header.interleave = std::stoi(argv[++i], nullptr, 0);
+						}
 					}
 				} else {
 					print_help(*argv);
@@ -114,10 +121,10 @@ int main(int argc, char** argv) {
 				print_help(*argv);
 			}
 		}
-	}
-	catch (...) {
+	} catch (...) {
 		print_help(*argv);
 	}
+
 	if (header.magic[3] == 'i' && header.interleave == 0) {
 		print_help(*argv);
 	}
