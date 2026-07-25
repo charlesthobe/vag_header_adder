@@ -188,6 +188,8 @@ int main(int argc, char** argv) {
 	}
 	if (header.magic[3] == 'i') {
 		padding_size += 0x800 - 0x30;
+	} else if (header.magic[3] == '1' || header.magic[3] == '2' || header.version == 0x02000000 || header.version == 0x40000000) {
+		padding_size += 0x10; // At 0x30 offset there is additional 0x10-byte data, can be left blank as padding.
 	}
 	std::vector<char>padding_buffer(padding_size, 0);
 
