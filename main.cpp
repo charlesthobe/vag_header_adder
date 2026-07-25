@@ -133,6 +133,11 @@ int main(int argc, char** argv) {
 		print_help(*argv);
 	}
 
+	if (!std::filesystem::exists(input)) {
+		std::print(stderr, "Error: input file: \"{}\" doesn't exist.\n", input);
+		return EXIT_FAILURE;
+	}
+
 	std::ifstream input_handle{input, std::ios::binary};
 
 	auto input_size = std::filesystem::file_size(input);
