@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (!std::filesystem::exists(input)) {
-		std::print(stderr, "Error: input file: \"{}\" doesn't exist.\n", input);
+		std::print(stderr, "Error: input file \"{}\" doesn't exist.\n", input);
 		return EXIT_FAILURE;
 	}
 
@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
 	}
 	if (input_size % 0x10) {
 		std::print("Warning: Input file \"{}\" is potentially invalid\n"
-			"Size of input file is: {} which is not divisble by 16\n"
+			"Size of input file is {} which is not divisble by 16\n"
 			"File sizes should be divisible by 16 due to 16 byte alignment of vag format.\n"
 			, input, input_size);
 		if (force_flag == UNSET) {
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 	if (buff1 == 0 && buff2 == 0) {
 		padding_size = 0;
 	} else {
-		std::print("Input file: \"{}\" could be invalid because it doesn't have padding.\n", input);
+		std::print("Input file \"{}\" could be invalid because it doesn't have padding.\n", input);
 		if (force_flag == UNSET) {
 			std::print("Do you still want to proceed? [y/N]: ", input);
 			std::getline(std::cin, line_buffer);
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (std::filesystem::exists(output)) {
-		std::print("Output file: \"{}\" exists\n", output);
+		std::print("Output file \"{}\" exists\n", output);
 		if (overwrite_flag == UNSET) {
 			std::print("Do you want to replace it? [y/N]: ");
 			std::getline(std::cin, line_buffer);
