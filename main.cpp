@@ -16,9 +16,9 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 		"  -i, --input <file>                           Headerless VAG file (Required).\n"
 		"  -o, --output <file>                          Output VAG file (Required).\n"
 		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
+		"  -v, --version <ver>                          Header version (Default: 32 / 0x20).\n"
 		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100).\n"
 		"  --name <track_name>                          Track name (Max 16 chars).\n"
-		"  -v, --version <ver>                          Header version (Default: 32 / 0x20).\n"
 		"  --yes, -y                                    Overwrite output file if it exists without prompting.\n"
 		"  --no, -n                                     Do not overwrite output file if it exists.\n"
 		"  --force, -f                                  Ignores non-critical errors without prompting.\n"
@@ -87,7 +87,11 @@ int main(int argc, char** argv) {
 				return 0;
 			}
 
-			if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
+			if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
+				input = argv[++i];
+			} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
+				output = argv[++i];
+			} else if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
 				if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
 					header.magic[3] = *argv[++i];
 					if (header.magic[3] == 'i') {
@@ -106,10 +110,6 @@ int main(int argc, char** argv) {
 				} else {
 					print_help(*argv);
 				}
-			} else if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
-				input = argv[++i];
-			} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
-				output = argv[++i];
 			} else {
 				print_help(*argv);
 			}
