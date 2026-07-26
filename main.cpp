@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-void print_help(const char* prog_name, int status = EXIT_FAILURE) {
+[[noreturn]] void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 	std::print("Usage: {0} <options>\n"
 		"Options:\n"
 		"  -i, --input <file>                           Headerless VAG file (Required).\n"
@@ -36,7 +36,7 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 }
 
 template <typename... T>
-void print_error(std::format_string<T...> fmt, T&&... args) {
+[[noreturn]] void print_error(std::format_string<T...> fmt, T&&... args) {
 	std::print(std::cerr, fmt, std::forward<T>(args)...);
 	std::exit(EXIT_FAILURE);
 }
