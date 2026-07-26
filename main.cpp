@@ -35,6 +35,12 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 	std::exit(status);
 }
 
+template <typename... T>
+void print_error(std::format_string<T...> fmt, T&&... args) {
+	std::print(std::cerr, fmt, std::forward<T>(args)...);
+	std::exit(EXIT_FAILURE);
+}
+
 #pragma pack(1)
 // 2-byte union
 union version_2_and_3_overlap {
@@ -81,6 +87,7 @@ int main(int argc, char** argv) {
 		try {
 			for (i = 1; i < argc; ++i) {
 				if (*argv[i] != '-') {
+					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", argv[i]);
 					print_help(*argv);
 				}
 
@@ -105,7 +112,7 @@ int main(int argc, char** argv) {
 				}
 
 				if (i == argc - 1) {
-					print_help(*argv);
+					print_error("Last option \"{}\" either requires an argument or is invalid.\n", argv[i]);
 				}
 
 				if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
@@ -124,8 +131,7 @@ int main(int argc, char** argv) {
 							}
 						}
 					} else {
-						std::print("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
-						return EXIT_FAILURE;
+						print_error("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
 					}
 				} else if (std::string_view{argv[i]} == "--version" || std::string_view{argv[i]} == "-v") {
 					header.version = std::stoi(argv[++i], nullptr, 0);
@@ -137,37 +143,31 @@ int main(int argc, char** argv) {
 					if (std::strlen(argv[i + 1]) <= 16) {
 						std::strcpy(header.name, argv[++i]);
 					} else {
-						std::print("Name cannot be longer than 16 characters in ASCII.\n");
+						print_error("Name cannot be longer than 16 characters in ASCII.\n");
 					}
 				} else {
-					std::print("Invalid argument \"{}\".\n\n", argv[i]);
-					print_help(*argv);
+					print_error("Invalid argument \"{}\".\n\n", argv[i]);
 				}
 			}
 		} catch (...) {
-			std::print("A number must come after \"{}\" argument.\n", argv[i - 1]);
-			return EXIT_FAILURE;
+			print_error("A number must come after \"{}\" argument.\n", argv[i - 1]);
 		}
 	}
 
 	if (header.magic[3] == 'i' && header.interleave == 0) {
-		std::print("The value that comes after the \"i\" must be not a zero.");
-		return EXIT_FAILURE;
+		print_error("The value that comes after the \"i\" must be not a zero.");
 	}
 
 	if (header.overlap.v3_num_channels != 0 && (header.version != 3 && header.version != 0x20001 && header.version != 0x30000)) {
-		std::print("--channels, -c option requires the version to be set to 3, 0x20001 or 0x30000\n"
+		print_error("--channels, -c option requires the version to be set to 3, 0x20001 or 0x30000\n"
 			"If you want stereo vag you might were supposed to use VAG2 or VAGi types.\n");
-		return EXIT_FAILURE;
 	}
 
 	if (!input) {
-		std::print("An input file needs to be specified.\n");
-		return EXIT_FAILURE;
+		print_error("An input file needs to be specified.\n");
 	}
 	if (!output) {
-		std::print("An output file needs to be specified.\n");
-		return EXIT_FAILURE;
+		print_error("An output file needs to be specified.\n");
 	}
 
 	if (header.version == 3) {
@@ -181,16 +181,14 @@ int main(int argc, char** argv) {
 	}
 
 	if (!std::filesystem::exists(input)) {
-		std::print(stderr, "Error: input file \"{}\" doesn't exist.\n", input);
-		return EXIT_FAILURE;
+		print_error("Error: input file \"{}\" doesn't exist.\n", input);
 	}
 
 	std::ifstream input_handle{input, std::ios::binary};
 
 	auto input_size = std::filesystem::file_size(input);
 	if (input_size < 0x10) {
-		std::print("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
-		return EXIT_FAILURE;
+		print_error("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
 	}
 	if (input_size % 0x10) {
 		std::print("Warning: Input file \"{}\" is potentially invalid\n"
@@ -202,12 +200,10 @@ int main(int argc, char** argv) {
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
-				std::print("Aborting.\n");
-				return EXIT_FAILURE;
+				print_error("Aborting.\n");
 			}
 		} else if (force_flag == NO) {
-			std::print("Aborting.\n");
-			return EXIT_FAILURE;
+			print_error("Aborting.\n");
 		}
 		std::print("Proceeding.\n");
 	}
@@ -228,12 +224,10 @@ int main(int argc, char** argv) {
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
-				std::print("Aborting.\n");
-				return EXIT_FAILURE;
+				print_error("Aborting.\n");
 			}
 		} else if (force_flag == NO) {
-			std::print("Aborting.\n");
-			return EXIT_FAILURE;
+			print_error("Aborting.\n");
 		}
 		std::print("Proceeding.\n");
 		padding_size = 0x10;
@@ -269,12 +263,10 @@ int main(int argc, char** argv) {
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
-				std::print("Aborting.\n");
-				return EXIT_FAILURE;
+				print_error("Aborting.\n");
 			}
 		} else if (overwrite_flag == NO) {
-			std::print("Aborting.\n");
-			return EXIT_FAILURE;
+			print_error("Aborting.\n");
 		}
 		std::print("Proceeding.\n");
 	}
