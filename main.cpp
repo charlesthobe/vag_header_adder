@@ -76,83 +76,98 @@ int main(int argc, char** argv) {
 
 	vag_header header;
 
-	try {
-		for (int i =1; i < argc; ++i) {
-			if (*argv[i] != '-') {
-				print_help(*argv);
-			}
+	{
+		int i;
+		try {
+			for (i = 1; i < argc; ++i) {
+				if (*argv[i] != '-') {
+					print_help(*argv);
+				}
 
-			if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
-				overwrite_flag = YES;
-				continue;
-			}
-			if (std::string_view{argv[i]} == "--no" || std::string_view{argv[i]} == "-n") {
-				overwrite_flag = NO;
-				continue;
-			}
-			if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
-				force_flag = YES;
-				continue;
-			}
-			if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
-				force_flag = NO;
-				continue;
-			}
-			if (std::string_view{argv[i]} == "--help" || std::string_view{argv[i]} == "-h") {
-				print_help(*argv, EXIT_SUCCESS);
-			}
+				if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
+					overwrite_flag = YES;
+					continue;
+				}
+				if (std::string_view{argv[i]} == "--no" || std::string_view{argv[i]} == "-n") {
+					overwrite_flag = NO;
+					continue;
+				}
+				if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
+					force_flag = YES;
+					continue;
+				}
+				if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
+					force_flag = NO;
+					continue;
+				}
+				if (std::string_view{argv[i]} == "--help" || std::string_view{argv[i]} == "-h") {
+					print_help(*argv, EXIT_SUCCESS);
+				}
 
-			if (i == argc - 1) {
-				print_help(*argv);
-			}
+				if (i == argc - 1) {
+					print_help(*argv);
+				}
 
-			if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
-				input = argv[++i];
-			} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
-				output = argv[++i];
-			} else if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
-				if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
-					header.magic[3] = *argv[++i];
-					if (header.magic[3] == 'i') {
-						if (i == argc - 1) {
-							print_help(*argv);
-						} else {
-							header.interleave = std::stoi(argv[++i], nullptr, 0);
+				if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
+					input = argv[++i];
+				} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
+					output = argv[++i];
+				} else if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
+					if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
+						header.magic[3] = *argv[++i];
+						if (header.magic[3] == 'i') {
+							if (i == argc - 1) {
+								++i;
+								throw 0;
+							} else {
+								header.interleave = std::stoi(argv[++i], nullptr, 0);
+							}
 						}
+					} else {
+						std::print("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
+						return EXIT_FAILURE;
+					}
+				} else if (std::string_view{argv[i]} == "--version" || std::string_view{argv[i]} == "-v") {
+					header.version = std::stoi(argv[++i], nullptr, 0);
+				} else if (std::string_view{argv[i]} == "--sample_rate" || std::string_view{argv[i]} == "-sr") {
+					header.sample_rate = std::stoi(argv[++i], nullptr, 0);
+				} else if (std::string_view{argv[i]} == "--channels" || std::string_view{argv[i]} == "-c") {
+					header.overlap.v3_num_channels = std::stoi(argv[++i], nullptr, 0);
+				} else if (std::string_view{argv[i]} == "--name") {
+					if (std::strlen(argv[i + 1]) <= 16) {
+						std::strcpy(header.name, argv[++i]);
+					} else {
+						std::print("Name cannot be longer than 16 characters in ASCII.\n");
 					}
 				} else {
+					std::print("Invalid argument \"{}\".\n\n", argv[i]);
 					print_help(*argv);
 				}
-			} else if (std::string_view{argv[i]} == "--version" || std::string_view{argv[i]} == "-v") {
-				header.version = std::stoi(argv[++i], nullptr, 0);
-			} else if (std::string_view{argv[i]} == "--sample_rate" || std::string_view{argv[i]} == "-sr") {
-				header.sample_rate = std::stoi(argv[++i], nullptr, 0);
-			} else if (std::string_view{argv[i]} == "--channels" || std::string_view{argv[i]} == "-c") {
-				header.overlap.v3_num_channels = std::stoi(argv[++i], nullptr, 0);
-			} else if (std::string_view{argv[i]} == "--name") {
-				if (std::strlen(argv[i + 1]) <= 16) {
-					std::strcpy(header.name, argv[++i]);
-				} else {
-					print_help(*argv);
-				}
-			} else {
-				print_help(*argv);
 			}
+		} catch (...) {
+			std::print("A number must come after \"{}\" argument.\n", argv[i - 1]);
+			return EXIT_FAILURE;
 		}
-	} catch (...) {
-		print_help(*argv);
 	}
 
 	if (header.magic[3] == 'i' && header.interleave == 0) {
-		print_help(*argv);
+		std::print("The value that comes after the \"i\" must be not a zero.");
+		return EXIT_FAILURE;
 	}
 
 	if (header.overlap.v3_num_channels != 0 && (header.version != 3 && header.version != 0x20001 && header.version != 0x30000)) {
-		print_help(*argv);
+		std::print("--channels, -c option requires the version to be set to 3, 0x20001 or 0x30000\n"
+			"If you want stereo vag you might were supposed to use VAG2 or VAGi types.\n");
+		return EXIT_FAILURE;
 	}
 
-	if (!input || !output) {
-		print_help(*argv);
+	if (!input) {
+		std::print("An input file needs to be specified.\n");
+		return EXIT_FAILURE;
+	}
+	if (!output) {
+		std::print("An output file needs to be specified.\n");
+		return EXIT_FAILURE;
 	}
 
 	if (header.version == 3) {
@@ -187,11 +202,14 @@ int main(int argc, char** argv) {
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
+				std::print("Aborting.\n");
 				return EXIT_FAILURE;
 			}
 		} else if (force_flag == NO) {
+			std::print("Aborting.\n");
 			return EXIT_FAILURE;
 		}
+		std::print("Proceeding.\n");
 	}
 
 	// Determine padding
@@ -210,11 +228,14 @@ int main(int argc, char** argv) {
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
+				std::print("Aborting.\n");
 				return EXIT_FAILURE;
 			}
 		} else if (force_flag == NO) {
+			std::print("Aborting.\n");
 			return EXIT_FAILURE;
 		}
+		std::print("Proceeding.\n");
 		padding_size = 0x10;
 		input_size += 0x10;
 	}
@@ -248,11 +269,14 @@ int main(int argc, char** argv) {
 			std::getline(std::cin, line_buffer);
 			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
 			if (line_buffer != "y") {
+				std::print("Aborting.\n");
 				return EXIT_FAILURE;
 			}
 		} else if (overwrite_flag == NO) {
+			std::print("Aborting.\n");
 			return EXIT_FAILURE;
 		}
+		std::print("Proceeding.\n");
 	}
 
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
