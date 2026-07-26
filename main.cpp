@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <cstring>
@@ -18,6 +19,7 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
 		"  -v, --version <ver>                          Header version (Default: 32 / 0x20).\n"
 		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100).\n"
+		"  --channels, -c                               Number of channels for versions: 3, 0x20001 and 0x30000\n"
 		"  --name <track_name>                          Track name (Max 16 chars).\n"
 		"  --yes, -y                                    Overwrite output file if it exists without prompting.\n"
 		"  --no, -n                                     Do not overwrite output file if it exists.\n"
@@ -25,6 +27,7 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 		"  --no-force, -nf                              Do not proceed when non-critical errors are met.\n"
 		"  -h, --help                                   Show this help message.\n\n"
 		"Note: if you really don't want to be prompted at all you must combine either --yes/-y or --no/-n with either --force/-f or --no-force/-nf\n\n"
+		"Note: only VAGp and VAGi with version 32 are supported, support of other formats is experimental.\n\n"
 		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t i 0x18000\n"
 		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t 2\n"
 		"e.g:\n    {0} -i in.vab -o out.vag\n"
@@ -33,14 +36,27 @@ void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 }
 
 #pragma pack(1)
+// 2-byte union
+union version_2_and_3_overlap {
+	std::array<uint8_t, 2> v2_unknown;
+	uint8_t v3_num_channels;
+	uint8_t v_other_force_mono;
+};
 struct vag_header {
-	char magic[4] = {'V', 'A', 'G', 'p'};
-	uint32_t version = 0x20;
-	uint32_t interleave = 0; // Little-endian unlike the reset
-	uint32_t channel_size = 0;
-	uint32_t sample_rate = 44100;
-	char reserved[12] = {};
-	char name[16] = {};
+	char magic[4] = {'V', 'A', 'G', 'p'}; // 0x00 - 0x03
+	uint32_t version = 0x20; //0x04 - 0x07
+	uint32_t interleave = 0; // 0x08 - 0x0B Little-endian unlike the reset
+	uint32_t channel_size = 0; // 0x0C -0x0F
+	uint32_t sample_rate = 44100; // 0x10 - 0x13
+	// Version 2, 3, 0x20001 and 0x30000 stuff
+	std::array<uint8_t, 2> v2_vol_left = {}; // 0x14 - 0x15
+	std::array<uint8_t, 2> v2_vol_right = {}; // 0x16 - 0x17
+	std::array<uint8_t, 2> v2_pitch = {}; // 0x18 - 0x19
+	std::array<uint8_t, 2> v2_ADSR1 = {}; // 0x1A - 0x1B
+	std::array<uint8_t, 2> v2_ADSR2 = {}; // 0x1C - 0x1D
+	version_2_and_3_overlap overlap = {}; // 0x1E - 0x1F
+	// End version 2, 3, 0x20001 and 0x30000 stuff
+	char name[16] = {}; // 0x20
 };
 #pragma pack()
 
@@ -111,6 +127,8 @@ int main(int argc, char** argv) {
 				header.version = std::stoi(argv[++i], nullptr, 0);
 			} else if (std::string_view{argv[i]} == "--sample_rate" || std::string_view{argv[i]} == "-sr") {
 				header.sample_rate = std::stoi(argv[++i], nullptr, 0);
+			} else if (std::string_view{argv[i]} == "--channels" || std::string_view{argv[i]} == "-c") {
+				header.overlap.v3_num_channels = std::stoi(argv[++i], nullptr, 0);
 			} else if (std::string_view{argv[i]} == "--name") {
 				if (std::strlen(argv[i + 1]) <= 16) {
 					std::strcpy(header.name, argv[++i]);
@@ -129,8 +147,22 @@ int main(int argc, char** argv) {
 		print_help(*argv);
 	}
 
+	if (header.overlap.v3_num_channels != 0 && (header.version != 3 && header.version != 0x20001 && header.version != 0x30000)) {
+		print_help(*argv);
+	}
+
 	if (!input || !output) {
 		print_help(*argv);
+	}
+
+	if (header.version == 3) {
+		// Initialize with default values according to NoCash / problemkaputt.de
+		header.v2_vol_left = {0x4E, 0x82};
+		header.v2_vol_right = {0x4E, 0x82};
+		header.v2_pitch = {0xA8, 0x88};
+		header.v2_ADSR1 = {0x00, 0x00};
+		header.v2_ADSR2 = {0x00, 0xE1};
+		header.overlap.v2_unknown = {0xA0, 0x23};
 	}
 
 	if (!std::filesystem::exists(input)) {
