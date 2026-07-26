@@ -62,7 +62,7 @@ struct vag_header {
 	std::array<uint8_t, 2> v2_ADSR2 = {}; // 0x1C - 0x1D
 	version_2_and_3_overlap overlap = {}; // 0x1E - 0x1F
 	// End version 2, 3, 0x20001 and 0x30000 stuff
-	char name[16] = {}; // 0x20
+	char name[16] = {}; // 0x20 - 0x2F
 };
 #pragma pack()
 
