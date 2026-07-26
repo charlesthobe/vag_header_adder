@@ -260,4 +260,5 @@ int main(int argc, char** argv) {
 	output_handle.write(reinterpret_cast<const char*>(&header), sizeof(header));
 	output_handle.write(padding_buffer.data(), padding_buffer.size());
 	output_handle << input_handle.rdbuf();
+	std::print("File done: \"{}\"\n", output);
 }
