@@ -12,13 +12,14 @@
 #include <vector>
 
 [[noreturn]] void print_help(const char* prog_name, int status = EXIT_FAILURE) {
-	std::print("Usage: {0} <options>\n"
+	std::print("Usage: [reverse] -i <file> -o <file> [options]\n"
+		"  reverse                                      Experimental: get headerless body (vab) out of vag, only accepts --input/-i or --output/-o\n\n"
 		"Options:\n"
-		"  -i, --input <file>                           Headerless VAG file (Required).\n"
-		"  -o, --output <file>                          Output VAG file (Required).\n"
-		"  -t, --type <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
-		"  -v, --version <ver>                          Header version (Default: 32 / 0x20).\n"
-		"  -sr, --sample_rate <hz>                      Sample rate (Default: 44100).\n"
+		"  --input, -i <file>                           Headerless VAG file (Required).\n"
+		"  --output, -o <file>                          Output VAG file (Required).\n"
+		"  --type, -t <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
+		"  --version, -v <ver>                          Header version (Default: 32 / 0x20).\n"
+		"  --sample_rate, -sr <hz>                      Sample rate (Default: 44100).\n"
 		"  --channels, -c                               Number of channels for versions: 3, 0x20001 and 0x30000\n"
 		"  --name <track_name>                          Track name (Max 16 chars).\n"
 		"  --yes, -y                                    Overwrite output file if it exists without prompting.\n"
@@ -66,6 +67,16 @@ struct vag_header {
 };
 #pragma pack()
 
+void reverse_header_endianness(vag_header* header) {
+	if constexpr (std::endian::native == std::endian::little) {
+		header->version = std::byteswap(header->version);
+		header->channel_size = std::byteswap(header->channel_size);
+		header->sample_rate = std::byteswap(header->sample_rate);
+	} else if constexpr (std::endian::native == std::endian::big) {
+		header->interleave = std::byteswap(header->interleave);
+	}
+}
+
 int main(int argc, char** argv) {
 
 	enum {
@@ -78,14 +89,24 @@ int main(int argc, char** argv) {
 	const char* output = nullptr;
 	int overwrite_flag = UNSET;
 	int force_flag = UNSET;
+	bool reverse_mode_of_operation = false;
 	std::string line_buffer;
 
 	vag_header header;
 
 	{
-		int i;
+		int i = 1;
+		if (argc > 1) {
+			if (std::string_view{argv[1]} == "reverse") {
+				reverse_mode_of_operation = true;
+				i = 2;
+			}
+		} else {
+			print_help(*argv);
+		}
+
 		try {
-			for (i = 1; i < argc; ++i) {
+			for (; i < argc; ++i) {
 				if (*argv[i] != '-') {
 					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", argv[i]);
 					print_help(*argv);
@@ -100,10 +121,16 @@ int main(int argc, char** argv) {
 					continue;
 				}
 				if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
+					if (reverse_mode_of_operation) {
+						print_error("\"reverse\" mode only accepts --input/-i, --output/-o, --yes/-y and --no/-n");
+					}
 					force_flag = YES;
 					continue;
 				}
 				if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
+					if (reverse_mode_of_operation) {
+						print_error("\"reverse\" mode only accepts --input/-i, --output/-o, --yes/-y and --no/-n");
+					}
 					force_flag = NO;
 					continue;
 				}
@@ -119,6 +146,8 @@ int main(int argc, char** argv) {
 					input = argv[++i];
 				} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
 					output = argv[++i];
+				} else if (reverse_mode_of_operation) {
+						print_error("\"reverse\" mode only accepts --input/-i, --output/-o, --yes/-y and --no/-n");
 				} else if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
 					if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
 						header.magic[3] = *argv[++i];
@@ -190,6 +219,23 @@ int main(int argc, char** argv) {
 	if (input_size < 0x10) {
 		print_error("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
 	}
+
+	if (reverse_mode_of_operation) {
+		std::print("Warning: extracting VAB from VAG is strictly experimental, resulting files can be broken!\n");
+		if (input_size < sizeof(header)) {
+			print_error("Input file is smaller than a VAG header!\n");
+		}
+		input_handle.read(reinterpret_cast<char*>(&header), sizeof(header));
+		input_handle.seekg(0, std::ios::beg);
+		// To native endianness
+		reverse_header_endianness(&header);
+		std::string_view header_magic{header.magic, 3};
+		if (!(header_magic != "VAG" || header.magic[3] != 'p' || header.magic[3] != '1' || header.magic[3] != '2' || header.magic[3] != 'i' ||
+			header.version != 0 || header.version != 2 || header.version != 3 || header.version != 32 || header.version != 0x20001 || header.version != 0x30000)) {
+				print_error("VAG file not supported or not a VAG file\n");
+			}
+	}
+
 	if (input_size % 0x10) {
 		std::print("Warning: Input file \"{}\" is potentially invalid\n"
 			"Size of input file is {} which is not divisble by 16\n"
@@ -210,12 +256,10 @@ int main(int argc, char** argv) {
 
 	// Determine padding
 	size_t padding_size;
-	uint64_t buff1;
-	uint64_t buff2;
-	input_handle.read(reinterpret_cast<char*>(&buff1), 8);
-	input_handle.read(reinterpret_cast<char*>(&buff2), 8);
+	uint64_t first_chunk[2];
+	input_handle.read(reinterpret_cast<char*>(first_chunk), 0x10);
 	input_handle.seekg(0, std::ios::beg);
-	if (buff1 == 0 && buff2 == 0) {
+	if (first_chunk[0] == 0 && first_chunk[1] == 0 || reverse_mode_of_operation) {
 		padding_size = 0;
 	} else {
 		std::print("Input file \"{}\" could be invalid because it doesn't have padding.\n", input);
@@ -238,22 +282,15 @@ int main(int argc, char** argv) {
 	} else if (header.magic[3] == '1' || header.magic[3] == '2' || header.version == 0x02000000 || header.version == 0x40000000) {
 		padding_size += 0x10; // At 0x30 offset there is additional 0x10-byte data, can be left blank as padding.
 	}
-	std::vector<char>padding_buffer(padding_size, 0);
-
+	std::vector<char> padding_buffer;
+	if (!reverse_mode_of_operation) {
+		padding_buffer.resize(padding_size, 0);
+	}
 
 	if (header.magic[3] == 'i' || header.magic[3] == '2') {
 		header.channel_size = input_size / 2;
 	} else {
 		header.channel_size = input_size;
-	}
-
-	// Correct endianness
-	if constexpr (std::endian::native == std::endian::little) {
-		header.version = std::byteswap(header.version);
-		header.channel_size = std::byteswap(header.channel_size);
-		header.sample_rate = std::byteswap(header.sample_rate);
-	} else if constexpr (std::endian::native == std::endian::big) {
-		header.interleave = std::byteswap(header.interleave);
 	}
 
 	if (std::filesystem::exists(output)) {
@@ -273,8 +310,17 @@ int main(int argc, char** argv) {
 
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
-	output_handle.write(reinterpret_cast<const char*>(&header), sizeof(header));
-	output_handle.write(padding_buffer.data(), padding_buffer.size());
+	if (reverse_mode_of_operation) {
+		input_handle.seekg(sizeof(header) + padding_size, std::ios::beg);
+	} else {
+		// Correct endianness
+		reverse_header_endianness(&header);
+		// Write out header
+		output_handle.write(reinterpret_cast<const char*>(&header), sizeof(header));
+		// Write out padding
+		output_handle.write(padding_buffer.data(), padding_buffer.size());
+	}
+	// Write out body
 	output_handle << input_handle.rdbuf();
 	std::print("File done: \"{}\"\n", output);
 }
