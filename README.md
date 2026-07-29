@@ -20,3 +20,20 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-23 -DCMAKE_CX
 ninja
 ```
 For usage just invoke the resulting `vag_header_adder` binary with no arguments or with `--help` or `-h` flag.
+<br>
+<br>
+<br>
+<br>
+<br>
+Bonus: If you want to make vag files appear as music files in your file browser run these commands while in the project root directory:
+```
+cp mime/packages/vag.xml ~/.local/share/mime/packages/.
+update-mime-database ~/.local/share/mime
+```
+This is specially useful if you use a music player capable of playing vag files like audacious with [vgmstream](https://github.com/vgmstream/vgmstream) plugin.
+
+And to undo this you can run:
+```
+rm ~/.local/share/mime/packages/vag.xml 
+update-mime-database ~/.local/share/mime
+```
