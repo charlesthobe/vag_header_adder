@@ -229,8 +229,8 @@ int main(int argc, char** argv) {
 		input_handle.seekg(0, std::ios::beg);
 		// To native endianness
 		reverse_header_endianness(&header);
-		std::string_view header_magic{header.magic, 3};
-		if (!(header_magic != "VAG" || header.magic[3] != 'p' || header.magic[3] != '1' || header.magic[3] != '2' || header.magic[3] != 'i' ||
+		std::string_view header_magic{header.magic, 4};
+		if (!(header_magic != "VAGp" || header_magic != "VAG1" || header_magic != "VAG2" || header_magic != "VAGi" ||
 			header.version != 0 || header.version != 2 || header.version != 3 || header.version != 32 || header.version != 0x20001 || header.version != 0x30000)) {
 				print_error("VAG file not supported or not a VAG file\n");
 			}
