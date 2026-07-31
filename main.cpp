@@ -235,6 +235,11 @@ int main(int argc, char** argv) {
 	}
 
 	std::ifstream input_handle{input, std::ios::binary};
+	try {
+		input_handle.exceptions(std::ios::badbit | std::ios::failbit);
+	} catch (...) {
+		print_error("Couldn't open input file \"{}\"\n", input);
+	}
 
 	auto input_size = std::filesystem::file_size(input);
 	if (input_size < 0x10) {
@@ -346,6 +351,11 @@ int main(int argc, char** argv) {
 	}
 
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
+	try {
+		output_handle.exceptions(std::ios::badbit | std::ios::failbit);
+	} catch (...) {
+		print_error("Couldn't open/create output file \"{}\"\n", output);
+	}
 
 	if (reverse_mode) {
 		std::print("Warning: extracting VB from VAG is strictly experimental, resulting files can be broken!\n");
