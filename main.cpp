@@ -42,6 +42,16 @@ template <typename... T>
 	std::exit(EXIT_FAILURE);
 }
 
+void proceed_question(const char* message) {
+	std::print("{}", message);
+	std::string answer;
+	std::getline(std::cin, answer);
+	std::ranges::transform(answer, answer.begin(), [](char c) { return static_cast<char>(tolower(c)); });
+	if (answer != "y") {
+		print_error("Aborting.\n");
+	}
+}
+
 #pragma pack(1)
 // 2-byte union
 union version_2_and_3_overlap {
@@ -90,7 +100,6 @@ int main(int argc, char** argv) {
 	int overwrite_flag = UNSET;
 	int force_flag = UNSET;
 	bool reverse_mode_of_operation = false;
-	std::string line_buffer;
 
 	vag_header header;
 
@@ -242,12 +251,7 @@ int main(int argc, char** argv) {
 			"File sizes should be divisible by 16 due to 16 byte alignment of vag format.\n"
 			, input, input_size);
 		if (force_flag == UNSET) {
-			std::print("Do you still want to proceed? [y/N]: ");
-			std::getline(std::cin, line_buffer);
-			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
-			if (line_buffer != "y") {
-				print_error("Aborting.\n");
-			}
+			proceed_question("Do you still want to proceed? [y/N]: ");
 		} else if (force_flag == NO) {
 			print_error("Aborting.\n");
 		}
@@ -264,12 +268,7 @@ int main(int argc, char** argv) {
 	} else {
 		std::print("Input file \"{}\" could be invalid because it doesn't have padding.\n", input);
 		if (force_flag == UNSET) {
-			std::print("Do you still want to proceed? [y/N]: ", input);
-			std::getline(std::cin, line_buffer);
-			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
-			if (line_buffer != "y") {
-				print_error("Aborting.\n");
-			}
+			proceed_question("Do you still want to proceed? [y/N]: ");
 		} else if (force_flag == NO) {
 			print_error("Aborting.\n");
 		}
@@ -296,12 +295,7 @@ int main(int argc, char** argv) {
 	if (std::filesystem::exists(output)) {
 		std::print("Output file \"{}\" exists\n", output);
 		if (overwrite_flag == UNSET) {
-			std::print("Do you want to replace it? [y/N]: ");
-			std::getline(std::cin, line_buffer);
-			std::ranges::transform(line_buffer, line_buffer.begin(), tolower);
-			if (line_buffer != "y") {
-				print_error("Aborting.\n");
-			}
+			proceed_question("Do you want to replace it? [y/N]: ");
 		} else if (overwrite_flag == NO) {
 			print_error("Aborting.\n");
 		}
