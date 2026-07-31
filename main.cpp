@@ -13,7 +13,7 @@
 
 [[noreturn]] void print_help(const char* prog_name, int status = EXIT_FAILURE) {
 	std::print("Usage: [reverse] -i <file> -o <file> [options]\n"
-		"  reverse                                      Experimental: get headerless body (vab) out of vag, only accepts --input/-i or --output/-o\n\n"
+		"  reverse                                      Experimental: get headerless body (VB) out of vag, only accepts --input/-i or --output/-o\n\n"
 		"Options:\n"
 		"  --input, -i <file>                           Headerless VAG file (Required).\n"
 		"  --output, -o <file>                          Output VAG file (Required).\n"
@@ -29,9 +29,9 @@
 		"  -h, --help                                   Show this help message.\n\n"
 		"Note: if you really don't want to be prompted at all you must combine either --yes/-y or --no/-n with either --force/-f or --no-force/-nf\n\n"
 		"Note: only VAGp and VAGi with version 32 are supported, support of other formats is experimental.\n\n"
-		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t i 0x18000\n"
-		"e.g:\n    {0} -i in.vab -o out.vag -sr 48000 -t 2\n"
-		"e.g:\n    {0} -i in.vab -o out.vag\n"
+		"e.g:\n    {0} -i in.VB -o out.vag -sr 48000 -t i 0x18000\n"
+		"e.g:\n    {0} -i in.VB -o out.vag -sr 48000 -t 2\n"
+		"e.g:\n    {0} -i in.VB -o out.vag\n"
 		, prog_name);
 	std::exit(status);
 }
@@ -221,7 +221,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (reverse_mode_of_operation) {
-		std::print("Warning: extracting VAB from VAG is strictly experimental, resulting files can be broken!\n");
+		std::print("Warning: extracting VB from VAG is strictly experimental, resulting files can be broken!\n");
 		if (input_size < sizeof(header)) {
 			print_error("Input file is smaller than a VAG header!\n");
 		}
