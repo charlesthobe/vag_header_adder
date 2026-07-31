@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
 				if (argc != 3) {
 					print_error("Usage of probe mode is: {} probe <file>\n", args[0]);
 				}
-				input = args[++i];
+				input = args[i + 1];
 				i = argc;
 			} else if (std::string_view{args[1]} == "reverse") {
 				reverse_mode = true;
@@ -129,62 +129,65 @@ int main(int argc, char** argv) {
 
 		try {
 			for (; i < argc; ++i) {
-				if (args[i][0] != '-') {
-					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", args[i]);
+				std::string_view arg{args[i]};
+
+				if (arg[0] != '-') {
+					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", arg);
 					print_help(args[0]);
 				}
 
-				if (std::string_view{args[i]} == "--yes" || std::string_view{args[i]} == "-y") {
+				if (arg == "--yes" || arg == "-y") {
 					overwrite_flag = YES;
 					continue;
 				}
-				if (std::string_view{args[i]} == "--no" || std::string_view{args[i]} == "-n") {
+				if (arg == "--no" || arg == "-n") {
 					overwrite_flag = NO;
 					continue;
 				}
-				if (std::string_view{args[i]} == "--force" || std::string_view{args[i]} == "-f") {
+				if (arg == "--force" || arg == "-f") {
 					force_flag = YES;
 					continue;
 				}
-				if (std::string_view{args[i]} == "--no-force" || std::string_view{args[i]} == "-nf") {
+				if (arg == "--no-force" || arg == "-nf") {
 					force_flag = NO;
 					continue;
 				}
-				if (std::string_view{args[i]} == "--help" || std::string_view{args[i]} == "-h") {
+				if (arg == "--help" || arg == "-h") {
 					print_help(args[0], EXIT_SUCCESS);
 				}
 
 				// Multi arg section
-				if (std::string_view{args[i]} == "--input" || std::string_view{args[i]} == "-i") {
+				// Evaluation of args.at(++i) must be done inside the if blocks to allow for precise error reporting.
+				if (arg == "--input" || arg == "-i") {
 					input = args.at(++i);
-				} else if (std::string_view{args[i]} == "--output" || std::string_view{args[i]} == "-o") {
+				} else if (arg == "--output" || arg == "-o") {
 					output = args.at(++i);
 				} else if (reverse_mode) {
-						print_error("\"reverse\" mode doesn't accept this parameter: \"{}\"\n", args[i]);
-				} else if (std::string_view{args[i]} == "--type" || std::string_view{args[i]} == "-t") {
-					auto arg_next = std::string_view(args.at(i + 1));
+						print_error("\"reverse\" mode doesn't accept this parameter: \"{}\"\n", arg);
+				} else if (arg == "--type" || arg == "-t") {
+					std::string_view arg_next{args.at(++i)};
 					if (arg_next == "p" || arg_next == "1" || arg_next == "2" || arg_next == "i") {
-						header.magic[3] = args[++i][0];
-						if (header.magic[3] == 'i') {
-							header.interleave = std::stoi(args.at(++i), nullptr, 0);
-						}
+						header.magic[3] = arg_next[0];
 					} else {
 						print_error("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
 					}
-				} else if (std::string_view{args[i]} == "--version" || std::string_view{args[i]} == "-v") {
+					if (header.magic[3] == 'i') {
+						header.interleave = std::stoi(args.at(++i), nullptr, 0);
+					}
+				} else if (arg == "--version" || arg == "-v") {
 					header.version = std::stoi(args.at(++i), nullptr, 0);
-				} else if (std::string_view{args[i]} == "--sample_rate" || std::string_view{args[i]} == "-sr") {
+				} else if (arg == "--sample_rate" || arg == "-sr") {
 					header.sample_rate = std::stoi(args.at(++i), nullptr, 0);
-				} else if (std::string_view{args[i]} == "--channels" || std::string_view{args[i]} == "-c") {
+				} else if (arg == "--channels" || arg == "-c") {
 					header.overlap.v3_num_channels = std::stoi(args.at(++i), nullptr, 0);
-				} else if (std::string_view{args[i]} == "--name") {
+				} else if (arg == "--name") {
 					if (std::strlen(args.at(i + 1)) <= 16) {
 						std::strcpy(header.name, args[++i]);
 					} else {
 						print_error("Name cannot be longer than 16 ASCII characters.\n");
 					}
 				} else {
-					print_error("Invalid argument \"{}\".\n\n", args[i]);
+					print_error("Invalid argument \"{}\".\n", arg);
 				}
 			}
 		} catch (std::invalid_argument& ex) {
@@ -194,7 +197,7 @@ int main(int argc, char** argv) {
 			throw;
 		} catch (std::out_of_range& ex) {
 			if (std::string_view(ex.what()) == "stoi") {
-				print_error("Provided number \"{} {}\" is too big.\n", args[i - 1], args[i]);
+				print_error("Provided number \"{}\" for argument \"{}\" is too big.\n", args[i], args[i - 1]);
 			} else {
 				print_error("Last option \"{}\" requires an argument.\n", args[i - 1]);
 			}
@@ -326,7 +329,7 @@ int main(int argc, char** argv) {
 			, num_channels
 			, header.channel_size
 			, header.channel_size * num_channels // Data size
-			, padding_size + sizeof(header) // Data start offset
+			, sizeof(header) + padding_size // Data start offset
 			, header.name
 			);
 		return EXIT_SUCCESS;
