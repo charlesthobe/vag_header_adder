@@ -7,12 +7,15 @@
 #include <fstream>
 #include <iostream>
 #include <print>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
 [[noreturn]] void print_help(const char* prog_name, int status = EXIT_FAILURE) {
-	std::print("Usage: {0} [reverse] -i <file> -o <file> [<options>...]\n\n"
+	std::print("Usage: {0} [probe | reverse] -i <file> -o <file> [<options>...]\n\n"
+		"Modes:\n"
+		"  probe <file>                                 Tries to get information about a provided vag file.\n"
 		"  reverse                                      Experimental: get headerless body (VB) out of vag, only accepts --input/-i or --output/-o\n\n"
 		"Options:\n"
 		"  --input, -i <file>                           Headerless VAG file (Required).\n"
@@ -89,6 +92,8 @@ void reverse_header_endianness(vag_header* header) {
 
 int main(int argc, char** argv) {
 
+	std::span args(argv, argc);
+
 	enum {
 		UNSET,
 		YES,
@@ -99,96 +104,100 @@ int main(int argc, char** argv) {
 	const char* output = nullptr;
 	int overwrite_flag = UNSET;
 	int force_flag = UNSET;
-	bool reverse_mode_of_operation = false;
+	bool probe_mode = false;
+	bool reverse_mode = false;
 
 	vag_header header;
 
 	{
 		int i = 1;
 		if (argc > 1) {
-			if (std::string_view{argv[1]} == "reverse") {
-				reverse_mode_of_operation = true;
+			if (std::string_view{args[1]} == "probe") {
+				probe_mode = true;
+				if (argc != 3) {
+					print_error("Usage of probe mode is: {} probe <file>\n", args[0]);
+				}
+				input = args[++i];
+				i = argc;
+			} else if (std::string_view{args[1]} == "reverse") {
+				reverse_mode = true;
 				i = 2;
 			}
 		} else {
-			print_help(*argv);
+			print_help(args[0]);
 		}
 
 		try {
 			for (; i < argc; ++i) {
-				if (*argv[i] != '-') {
-					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", argv[i]);
-					print_help(*argv);
+				if (args[i][0] != '-') {
+					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", args[i]);
+					print_help(args[0]);
 				}
 
-				if (std::string_view{argv[i]} == "--yes" || std::string_view{argv[i]} == "-y") {
+				if (std::string_view{args[i]} == "--yes" || std::string_view{args[i]} == "-y") {
 					overwrite_flag = YES;
 					continue;
 				}
-				if (std::string_view{argv[i]} == "--no" || std::string_view{argv[i]} == "-n") {
+				if (std::string_view{args[i]} == "--no" || std::string_view{args[i]} == "-n") {
 					overwrite_flag = NO;
 					continue;
 				}
-				if (std::string_view{argv[i]} == "--force" || std::string_view{argv[i]} == "-f") {
-					if (reverse_mode_of_operation) {
-						print_error("\"reverse\" mode only accepts --input/-i, --output/-o, --yes/-y and --no/-n");
-					}
+				if (std::string_view{args[i]} == "--force" || std::string_view{args[i]} == "-f") {
 					force_flag = YES;
 					continue;
 				}
-				if (std::string_view{argv[i]} == "--no-force" || std::string_view{argv[i]} == "-nf") {
-					if (reverse_mode_of_operation) {
-						print_error("\"reverse\" mode only accepts --input/-i, --output/-o, --yes/-y and --no/-n");
-					}
+				if (std::string_view{args[i]} == "--no-force" || std::string_view{args[i]} == "-nf") {
 					force_flag = NO;
 					continue;
 				}
-				if (std::string_view{argv[i]} == "--help" || std::string_view{argv[i]} == "-h") {
-					print_help(*argv, EXIT_SUCCESS);
+				if (std::string_view{args[i]} == "--help" || std::string_view{args[i]} == "-h") {
+					print_help(args[0], EXIT_SUCCESS);
 				}
 
-				if (i == argc - 1) {
-					print_error("Last option \"{}\" either requires an argument or is invalid.\n", argv[i]);
-				}
-
-				if (std::string_view{argv[i]} == "--input" || std::string_view{argv[i]} == "-i") {
-					input = argv[++i];
-				} else if (std::string_view{argv[i]} == "--output" || std::string_view{argv[i]} == "-o") {
-					output = argv[++i];
-				} else if (reverse_mode_of_operation) {
-						print_error("\"reverse\" mode only accepts --input/-i, --output/-o, --yes/-y and --no/-n");
-				} else if (std::string_view{argv[i]} == "--type" || std::string_view{argv[i]} == "-t") {
-					if ((*argv[i + 1] == 'p' || *argv[i + 1] == '1' || *argv[i + 1] == '2' || *argv[i + 1] == 'i') && argv[i + 1][1] == 0 ) {
-						header.magic[3] = *argv[++i];
+				// Multi arg section
+				if (std::string_view{args[i]} == "--input" || std::string_view{args[i]} == "-i") {
+					input = args.at(++i);
+				} else if (std::string_view{args[i]} == "--output" || std::string_view{args[i]} == "-o") {
+					output = args.at(++i);
+				} else if (reverse_mode) {
+						print_error("\"reverse\" mode doesn't accept this parameter: \"{}\"\n", args[i]);
+				} else if (std::string_view{args[i]} == "--type" || std::string_view{args[i]} == "-t") {
+					auto arg_next = std::string_view(args.at(i + 1));
+					if (arg_next == "p" || arg_next == "1" || arg_next == "2" || arg_next == "i") {
+						header.magic[3] = args[++i][0];
 						if (header.magic[3] == 'i') {
-							if (i == argc - 1) {
-								++i;
-								throw 0;
-							} else {
-								header.interleave = std::stoi(argv[++i], nullptr, 0);
-							}
+							header.interleave = std::stoi(args.at(++i), nullptr, 0);
 						}
 					} else {
 						print_error("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
 					}
-				} else if (std::string_view{argv[i]} == "--version" || std::string_view{argv[i]} == "-v") {
-					header.version = std::stoi(argv[++i], nullptr, 0);
-				} else if (std::string_view{argv[i]} == "--sample_rate" || std::string_view{argv[i]} == "-sr") {
-					header.sample_rate = std::stoi(argv[++i], nullptr, 0);
-				} else if (std::string_view{argv[i]} == "--channels" || std::string_view{argv[i]} == "-c") {
-					header.overlap.v3_num_channels = std::stoi(argv[++i], nullptr, 0);
-				} else if (std::string_view{argv[i]} == "--name") {
-					if (std::strlen(argv[i + 1]) <= 16) {
-						std::strcpy(header.name, argv[++i]);
+				} else if (std::string_view{args[i]} == "--version" || std::string_view{args[i]} == "-v") {
+					header.version = std::stoi(args.at(++i), nullptr, 0);
+				} else if (std::string_view{args[i]} == "--sample_rate" || std::string_view{args[i]} == "-sr") {
+					header.sample_rate = std::stoi(args.at(++i), nullptr, 0);
+				} else if (std::string_view{args[i]} == "--channels" || std::string_view{args[i]} == "-c") {
+					header.overlap.v3_num_channels = std::stoi(args.at(++i), nullptr, 0);
+				} else if (std::string_view{args[i]} == "--name") {
+					if (std::strlen(args.at(i + 1)) <= 16) {
+						std::strcpy(header.name, args[++i]);
 					} else {
-						print_error("Name cannot be longer than 16 characters in ASCII.\n");
+						print_error("Name cannot be longer than 16 ASCII characters.\n");
 					}
 				} else {
-					print_error("Invalid argument \"{}\".\n\n", argv[i]);
+					print_error("Invalid argument \"{}\".\n\n", args[i]);
 				}
 			}
-		} catch (...) {
-			print_error("A number must come after \"{}\" argument.\n", argv[i - 1]);
+		} catch (std::invalid_argument& ex) {
+			if (std::string_view(ex.what()) == "stoi") {
+				print_error("A number must come after \"{}\" argument.\n", args[i - 1]);
+			}
+			throw;
+		} catch (std::out_of_range& ex) {
+			if (std::string_view(ex.what()) == "stoi") {
+				print_error("Provided number \"{} {}\" is too big.\n", args[i - 1], args[i]);
+			} else {
+				print_error("Last option \"{}\" requires an argument.\n", args[i - 1]);
+			}
 		}
 	}
 
@@ -204,7 +213,7 @@ int main(int argc, char** argv) {
 	if (!input) {
 		print_error("An input file needs to be specified.\n");
 	}
-	if (!output) {
+	if (!output && !probe_mode) {
 		print_error("An output file needs to be specified.\n");
 	}
 
@@ -229,8 +238,7 @@ int main(int argc, char** argv) {
 		print_error("Error: size of input file must be at least 16 bytes, which is the size of one psx adpcm chunk.\n");
 	}
 
-	if (reverse_mode_of_operation) {
-		std::print("Warning: extracting VB from VAG is strictly experimental, resulting files can be broken!\n");
+	if (probe_mode || reverse_mode) {
 		if (input_size < sizeof(header)) {
 			print_error("Input file is smaller than a VAG header!\n");
 		}
@@ -263,7 +271,7 @@ int main(int argc, char** argv) {
 	uint64_t first_chunk[2];
 	input_handle.read(reinterpret_cast<char*>(first_chunk), 0x10);
 	input_handle.seekg(0, std::ios::beg);
-	if (first_chunk[0] == 0 && first_chunk[1] == 0 || reverse_mode_of_operation) {
+	if (first_chunk[0] == 0 && first_chunk[1] == 0 || probe_mode || reverse_mode) {
 		padding_size = 0;
 	} else {
 		std::print("Input file \"{}\" could be invalid because it doesn't have padding.\n", input);
@@ -282,16 +290,46 @@ int main(int argc, char** argv) {
 		padding_size += 0x10; // At 0x30 offset there is additional 0x10-byte data, can be left blank as padding.
 	}
 	std::vector<char> padding_buffer;
-	if (!reverse_mode_of_operation) {
+	if (!probe_mode && !reverse_mode) {
 		padding_buffer.resize(padding_size, 0);
 	}
 
-	if (header.magic[3] == 'i' || header.magic[3] == '2') {
-		header.channel_size = input_size / 2;
-	} else if (header.version == 3 || header.version == 0x20001 || header.version == 0x30000) {
-		header.channel_size = input_size / header.overlap.v3_num_channels;
-	} else {
-		header.channel_size = input_size;
+	if (!probe_mode && !reverse_mode) {
+		if (header.magic[3] == 'i' || header.magic[3] == '2') {
+			header.channel_size = input_size / 2;
+		} else if (header.version == 3 || header.version == 0x20001 || header.version == 0x30000) {
+			header.channel_size = input_size / header.overlap.v3_num_channels;
+		} else {
+			header.channel_size = input_size;
+		}
+	}
+
+	if (probe_mode) {
+		int num_channels = 1;
+		if (header.magic[3] == 'i' || header.magic[3] == '2') {
+			num_channels = 2;
+		} else if (header.version == 3 || header.version == 0x20001 || header.version == 0x30000) {
+			num_channels = header.overlap.v3_num_channels;
+		}
+		std::print("Probing {}...\n", input);
+		std::print("File type: {}\n"
+			"Version: {:#X}\n"
+			"Sample rate: {}\n"
+			"Number of channels: {}\n"
+			"Channel size: {}\n"
+			"Data size: {}\n"
+			"Data start offset: {:#X}\n"
+			"Track name: {}\n"
+			, std::string_view{header.magic, 4}
+			, header.version
+			, header.sample_rate
+			, num_channels
+			, header.channel_size
+			, header.channel_size * num_channels // Data size
+			, padding_size + sizeof(header) // Data start offset
+			, header.name
+			);
+		return EXIT_SUCCESS;
 	}
 
 	if (std::filesystem::exists(output)) {
@@ -306,7 +344,8 @@ int main(int argc, char** argv) {
 
 	std::fstream output_handle{output, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
 
-	if (reverse_mode_of_operation) {
+	if (reverse_mode) {
+		std::print("Warning: extracting VB from VAG is strictly experimental, resulting files can be broken!\n");
 		input_handle.seekg(sizeof(header) + padding_size, std::ios::beg);
 	} else {
 		// Correct endianness
