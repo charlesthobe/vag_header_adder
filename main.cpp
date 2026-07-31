@@ -12,12 +12,12 @@
 #include <vector>
 
 [[noreturn]] void print_help(const char* prog_name, int status = EXIT_FAILURE) {
-	std::print("Usage: [reverse] -i <file> -o <file> [options]\n"
+	std::print("Usage: {0} [reverse] -i <file> -o <file> [<options>...]\n\n"
 		"  reverse                                      Experimental: get headerless body (VB) out of vag, only accepts --input/-i or --output/-o\n\n"
 		"Options:\n"
 		"  --input, -i <file>                           Headerless VAG file (Required).\n"
 		"  --output, -o <file>                          Output VAG file (Required).\n"
-		"  --type, -t <type> <interleave_if_'i'>        Type of \"VAG(?)\", valid values: p (default), 1, 2 or i.\n"
+		"  --type, -t <type> [<interleave>]             Type of \"VAG(?)\", valid values: \"p\" (default), \"1\", \"2\" or \"i\" <interleave>.\n"
 		"  --version, -v <ver>                          Header version (Default: 32 / 0x20).\n"
 		"  --sample_rate, -sr <hz>                      Sample rate (Default: 44100).\n"
 		"  --channels, -c                               Number of channels for versions: 3, 0x20001 and 0x30000\n"
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (header.magic[3] == 'i' && header.interleave == 0) {
-		print_error("The value that comes after the \"i\" must be not a zero.");
+		print_error("The value that comes after the \"i\" must not be a zero.");
 	}
 
 	if (header.overlap.v3_num_channels != 0 && (header.version != 3 && header.version != 0x20001 && header.version != 0x30000)) {
