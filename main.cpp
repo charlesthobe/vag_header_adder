@@ -288,6 +288,8 @@ int main(int argc, char** argv) {
 
 	if (header.magic[3] == 'i' || header.magic[3] == '2') {
 		header.channel_size = input_size / 2;
+	} else if (header.version == 3 || header.version == 0x20001 || header.version == 0x30000) {
+		header.channel_size = input_size / header.overlap.v3_num_channels;
 	} else {
 		header.channel_size = input_size;
 	}
