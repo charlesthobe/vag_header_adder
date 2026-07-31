@@ -2,7 +2,7 @@
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
     <mime-type type="audio/vag">
     <comment>Sony VAG audio</comment>
-    <magic priority="50">
+    <magic priority="1">
       <match value="VAGp" type="string" offset="0"/>
       <match value="VAG1" type="string" offset="0"/>
       <match value="VAG2" type="string" offset="0"/>
@@ -10,6 +10,5 @@
       <match value="pGAV" type="string" offset="0"/>
       <match value="AAAp" type="string" offset="0"/>
     </magic>
-    <glob pattern="*.vag"/>
   </mime-type>
 </mime-info>
