@@ -5,7 +5,9 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <print>
 #include <string>
@@ -50,6 +52,25 @@ template <typename... T>
 [[noreturn]] void print_error(std::format_string<T...> fmt, T&&... args) {
 	std::print(std::cerr, fmt, std::forward<T>(args)...);
 	std::exit(EXIT_FAILURE);
+}
+
+template<typename T>
+T stoi_wrapper (const char* cstring, std::function<void()> error_invalid, std::function<void()> error_range) {
+	int value;
+	try {
+		value = std::stoi(cstring, nullptr, 0);
+	} catch (std::invalid_argument) {
+		error_invalid();
+		throw;
+	} catch (std::out_of_range) {
+		error_range();
+		throw;
+	}
+	if (value > std::numeric_limits<T>::max()) {
+		error_range();
+		throw (std::out_of_range(""));
+	}
+	return static_cast<T>(value);
 }
 
 void proceed_question(const char* message) {
@@ -135,6 +156,12 @@ int main(int argc, char** argv) {
 		auto missing_arg = [&]() {
 			print_error("Last option \"{}\" requires an argument.\n", argv[i - 1]);
 		};
+		auto error_invalid = [&]() {
+			print_error("A number must come after \"{}\" argument.\n", argv[i - 1]);
+		};
+		auto error_range = [&]() {
+			print_error("Provided number \"{}\" for argument \"{}\" is too big.\n", argv[i], argv[i - 1]);
+		};
 
 		for (; i < argc; ++i) {
 			std::string_view arg{argv[i]};
@@ -192,23 +219,23 @@ int main(int argc, char** argv) {
 					if (!arg_next) {
 						missing_arg();
 					}
-					header.interleave = std::stoi((*arg_next).data(), nullptr, 0);
+					header.interleave = stoi_wrapper<uint32_t>((*arg_next).data(), error_invalid, error_range);
 				}
 			} else if (arg == "--version" || arg == "-v") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				header.version = std::stoi((*arg_next).data(), nullptr, 0);
+				header.version = stoi_wrapper<uint32_t>((*arg_next).data(), error_invalid, error_range);
 			} else if (arg == "--sample_rate" || arg == "-sr") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				header.sample_rate = std::stoi((*arg_next).data(), nullptr, 0);
+				header.sample_rate = stoi_wrapper<uint32_t>((*arg_next).data(), error_invalid, error_range);
 			} else if (arg == "--channels" || arg == "-c") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				header.overlap.v3_num_channels = std::stoi((*arg_next).data(), nullptr, 0);
+				header.overlap.v3_num_channels = stoi_wrapper<uint8_t>((*arg_next).data(), error_invalid, error_range);
 			} else if (arg == "--name") {
 				if (!arg_next) {
 					missing_arg();
