@@ -6,8 +6,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <print>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -37,6 +37,13 @@
 		"e.g:\n    {0} -i in.VB -o out.vag\n"
 		, prog_name);
 	std::exit(status);
+}
+
+std::optional<std::string_view> get_arg(int argc, char** argv, int pos) {
+	if (pos < argc) {
+		return std::string_view{argv[pos]};
+	}
+	return std::nullopt;
 }
 
 template <typename... T>
@@ -92,8 +99,6 @@ void reverse_header_endianness(vag_header* header) {
 
 int main(int argc, char** argv) {
 
-	std::span args(argv, argc);
-
 	enum {
 		UNSET,
 		YES,
@@ -112,94 +117,109 @@ int main(int argc, char** argv) {
 	{
 		int i = 1;
 		if (argc > 1) {
-			if (std::string_view{args[1]} == "probe") {
+			if (std::string_view{argv[1]} == "probe") {
 				probe_mode = true;
 				if (argc != 3) {
-					print_error("Usage of probe mode is: {} probe <file>\n", args[0]);
+					print_error("Usage of probe mode is: {} probe <file>\n", argv[0]);
 				}
-				input = args[i + 1];
+				input = argv[i + 1];
 				i = argc;
-			} else if (std::string_view{args[1]} == "reverse") {
+			} else if (std::string_view{argv[1]} == "reverse") {
 				reverse_mode = true;
 				i = 2;
 			}
 		} else {
-			print_help(args[0]);
+			print_help(argv[0]);
 		}
 
-		try {
-			for (; i < argc; ++i) {
-				std::string_view arg{args[i]};
+		auto missing_arg = [&]() {
+			print_error("Last option \"{}\" requires an argument.\n", argv[i - 1]);
+		};
 
-				if (arg[0] != '-') {
-					std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", arg);
-					print_help(args[0]);
-				}
+		for (; i < argc; ++i) {
+			std::string_view arg{argv[i]};
 
-				if (arg == "--yes" || arg == "-y") {
-					overwrite_flag = YES;
-					continue;
-				}
-				if (arg == "--no" || arg == "-n") {
-					overwrite_flag = NO;
-					continue;
-				}
-				if (arg == "--force" || arg == "-f") {
-					force_flag = YES;
-					continue;
-				}
-				if (arg == "--no-force" || arg == "-nf") {
-					force_flag = NO;
-					continue;
-				}
-				if (arg == "--help" || arg == "-h") {
-					print_help(args[0], EXIT_SUCCESS);
-				}
+			if (arg[0] != '-') {
+				std::print(std::cerr, "Argument \"{}\" was not expected here\n\n", arg);
+				print_help(argv[0]);
+			}
 
-				// Multi arg section
-				// Evaluation of args.at(++i) must be done inside the if blocks to allow for precise error reporting.
-				if (arg == "--input" || arg == "-i") {
-					input = args.at(++i);
-				} else if (arg == "--output" || arg == "-o") {
-					output = args.at(++i);
-				} else if (reverse_mode) {
-						print_error("\"reverse\" mode doesn't accept this parameter: \"{}\"\n", arg);
-				} else if (arg == "--type" || arg == "-t") {
-					std::string_view arg_next{args.at(++i)};
-					if (arg_next == "p" || arg_next == "1" || arg_next == "2" || arg_next == "i") {
-						header.magic[3] = arg_next[0];
-					} else {
-						print_error("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
-					}
-					if (header.magic[3] == 'i') {
-						header.interleave = std::stoi(args.at(++i), nullptr, 0);
-					}
-				} else if (arg == "--version" || arg == "-v") {
-					header.version = std::stoi(args.at(++i), nullptr, 0);
-				} else if (arg == "--sample_rate" || arg == "-sr") {
-					header.sample_rate = std::stoi(args.at(++i), nullptr, 0);
-				} else if (arg == "--channels" || arg == "-c") {
-					header.overlap.v3_num_channels = std::stoi(args.at(++i), nullptr, 0);
-				} else if (arg == "--name") {
-					if (std::strlen(args.at(i + 1)) <= 16) {
-						std::strcpy(header.name, args[++i]);
-					} else {
-						print_error("Name cannot be longer than 16 ASCII characters.\n");
-					}
+			if (arg == "--yes" || arg == "-y") {
+				overwrite_flag = YES;
+				continue;
+			}
+			if (arg == "--no" || arg == "-n") {
+				overwrite_flag = NO;
+				continue;
+			}
+			if (arg == "--force" || arg == "-f") {
+				force_flag = YES;
+				continue;
+			}
+			if (arg == "--no-force" || arg == "-nf") {
+				force_flag = NO;
+				continue;
+			}
+			if (arg == "--help" || arg == "-h") {
+				print_help(argv[0], EXIT_SUCCESS);
+			}
+
+			// Multi arg section
+			auto arg_next = get_arg(argc, argv, ++i);
+			if (arg == "--input" || arg == "-i") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				input = (*arg_next).data();
+			} else if (arg == "--output" || arg == "-o") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				output = (*arg_next).data();
+			} else if (reverse_mode) {
+					print_error("\"reverse\" mode doesn't accept this parameter: \"{}\"\n", arg);
+			} else if (arg == "--type" || arg == "-t") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				if (*arg_next == "p" || *arg_next == "1" || *arg_next == "2" || *arg_next == "i") {
+					header.magic[3] = (*arg_next)[0];
 				} else {
-					print_error("Invalid argument \"{}\".\n", arg);
+					print_error("Argument for --type, -t could only be either \"p\", \"1\", \"2\" or \"i\".\n");
 				}
-			}
-		} catch (std::invalid_argument& ex) {
-			if (std::string_view(ex.what()) == "stoi") {
-				print_error("A number must come after \"{}\" argument.\n", args[i - 1]);
-			}
-			throw;
-		} catch (std::out_of_range& ex) {
-			if (std::string_view(ex.what()) == "stoi") {
-				print_error("Provided number \"{}\" for argument \"{}\" is too big.\n", args[i], args[i - 1]);
+				if (header.magic[3] == 'i') {
+					arg_next = get_arg(argc, argv, ++i);
+					if (!arg_next) {
+						missing_arg();
+					}
+					header.interleave = std::stoi((*arg_next).data(), nullptr, 0);
+				}
+			} else if (arg == "--version" || arg == "-v") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				header.version = std::stoi((*arg_next).data(), nullptr, 0);
+			} else if (arg == "--sample_rate" || arg == "-sr") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				header.sample_rate = std::stoi((*arg_next).data(), nullptr, 0);
+			} else if (arg == "--channels" || arg == "-c") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				header.overlap.v3_num_channels = std::stoi((*arg_next).data(), nullptr, 0);
+			} else if (arg == "--name") {
+				if (!arg_next) {
+					missing_arg();
+				}
+				if (std::strlen((*arg_next).data()) <= 16) {
+					std::strcpy(header.name, (*arg_next).data());
+				} else {
+					print_error("Name cannot be longer than 16 ASCII characters.\n");
+				}
 			} else {
-				print_error("Last option \"{}\" requires an argument.\n", args[i - 1]);
+				print_error("Invalid argument \"{}\".\n", arg);
 			}
 		}
 	}

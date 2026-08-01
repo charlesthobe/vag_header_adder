@@ -10,7 +10,7 @@ mkdir build && cd build
 cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release
 ninja
 ```
-Note: if you are on a debian based distro that doesn't support C++26 you could install LLVM version 23 and `libc++-23-dev` from https://apt.llvm.org/
+Note: if you are on a debian based distro that doesn't support C++23 such as debian 12 or ubuntu 24.04 you could install LLVM version 23 and `libc++-23-dev` from https://apt.llvm.org/
 and compile like so:
 ```
 git clone https://github.com/charlesthobe/vag_header_adder
