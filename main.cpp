@@ -54,11 +54,14 @@ template <typename... T>
 	std::exit(EXIT_FAILURE);
 }
 
-template<typename T>
+template <typename T>
+concept uint_or_less_type = std::unsigned_integral<T> && sizeof(T) <= sizeof(int32_t);
+
+template<uint_or_less_type T>
 T stoi_wrapper (const char* cstring, std::function<void()> error_invalid, std::function<void()> error_range) {
-	int value;
+	uint32_t value;
 	try {
-		value = std::stoi(cstring, nullptr, 0);
+		value = std::bit_cast<unsigned uint32_t>(std::stoi(cstring, nullptr, 0));
 	} catch (std::invalid_argument) {
 		error_invalid();
 		throw;
