@@ -58,22 +58,22 @@ template <typename T>
 concept uint_or_less_type = std::unsigned_integral<T> && sizeof(T) <= sizeof(int32_t);
 
 template<uint_or_less_type T>
-T stoi_wrapper (const char* cstring, std::function<void()> error_invalid, std::function<void()> error_range) {
+bool stoi_wrapper (const char* cstring, T* output, std::function<void()> error_invalid, std::function<void()> error_range) {
 	uint32_t value;
 	try {
-		value = std::bit_cast<unsigned uint32_t>(std::stoi(cstring, nullptr, 0));
+		*output = std::bit_cast<unsigned uint32_t>(std::stoi(cstring, nullptr, 0));
 	} catch (std::invalid_argument) {
 		error_invalid();
-		throw;
+		return false;
 	} catch (std::out_of_range) {
 		error_range();
-		throw;
+		return false;
 	}
 	if (value > std::numeric_limits<T>::max()) {
 		error_range();
-		throw (std::out_of_range(""));
+		return false;
 	}
-	return static_cast<T>(value);
+	return true;
 }
 
 void proceed_question(const char* message) {
@@ -222,23 +222,23 @@ int main(int argc, char** argv) {
 					if (!arg_next) {
 						missing_arg();
 					}
-					header.interleave = stoi_wrapper<uint32_t>((*arg_next).data(), error_invalid, error_range);
+					stoi_wrapper((*arg_next).data(), &header.interleave, error_invalid, error_range);
 				}
 			} else if (arg == "--version" || arg == "-v") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				header.version = stoi_wrapper<uint32_t>((*arg_next).data(), error_invalid, error_range);
+				stoi_wrapper((*arg_next).data(), &header.version, error_invalid, error_range);
 			} else if (arg == "--sample_rate" || arg == "-sr") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				header.sample_rate = stoi_wrapper<uint32_t>((*arg_next).data(), error_invalid, error_range);
+				stoi_wrapper((*arg_next).data(), &header.sample_rate, error_invalid, error_range);
 			} else if (arg == "--channels" || arg == "-c") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				header.overlap.v3_num_channels = stoi_wrapper<uint8_t>((*arg_next).data(), error_invalid, error_range);
+				stoi_wrapper((*arg_next).data(), &header.overlap.v3_num_channels, error_invalid, error_range);
 			} else if (arg == "--name") {
 				if (!arg_next) {
 					missing_arg();
