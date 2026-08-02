@@ -3,4 +3,6 @@ project(vag_header_adder)
 
 set(CMAKE_CXX_STANDARD 23)
 
+add_compile_options(-Wall -Wextra)
+
 add_executable(vag_header_adder main.cpp)

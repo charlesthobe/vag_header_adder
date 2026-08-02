@@ -63,9 +63,9 @@ int stoi_wrapper (const char* cstring, T* output) {
 	uint32_t value;
 	try {
 		value = std::bit_cast<uint32_t>(std::stoi(cstring, nullptr, 0));
-	} catch (std::invalid_argument) {
+	} catch (std::invalid_argument&) {
 		return EINVAL;
-	} catch (std::out_of_range) {
+	} catch (std::out_of_range&) {
 		return ERANGE;
 	}
 	if (value > std::numeric_limits<T>::max()) {
@@ -341,7 +341,7 @@ int main(int argc, char** argv) {
 	uint64_t first_chunk[2];
 	input_handle.read(reinterpret_cast<char*>(first_chunk), 0x10);
 	input_handle.seekg(0, std::ios::beg);
-	if (first_chunk[0] == 0 && first_chunk[1] == 0 || probe_mode || reverse_mode) {
+	if ((first_chunk[0] == 0 && first_chunk[1] == 0) || probe_mode || reverse_mode) {
 		padding_size = 0;
 	} else {
 		std::print("Input file \"{}\" could be invalid because it doesn't have padding.\n", input);
