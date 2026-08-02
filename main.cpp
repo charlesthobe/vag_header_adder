@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
@@ -58,22 +59,20 @@ template <typename T>
 concept uint_or_less_type = std::unsigned_integral<T> && sizeof(T) <= sizeof(int32_t);
 
 template<uint_or_less_type T>
-bool stoi_wrapper (const char* cstring, T* output, std::function<void()> error_invalid, std::function<void()> error_range) {
+int stoi_wrapper (const char* cstring, T* output) {
 	uint32_t value;
 	try {
-		*output = std::bit_cast<unsigned uint32_t>(std::stoi(cstring, nullptr, 0));
+		value = std::bit_cast<uint32_t>(std::stoi(cstring, nullptr, 0));
 	} catch (std::invalid_argument) {
-		error_invalid();
-		return false;
+		return EINVAL;
 	} catch (std::out_of_range) {
-		error_range();
-		return false;
+		return ERANGE;
 	}
 	if (value > std::numeric_limits<T>::max()) {
-		error_range();
-		return false;
+		return ERANGE;
 	}
-	return true;
+	*output = static_cast<T>(value);
+	return EXIT_SUCCESS;
 }
 
 void proceed_question(const char* message) {
@@ -159,11 +158,15 @@ int main(int argc, char** argv) {
 		auto missing_arg = [&]() {
 			print_error("Last option \"{}\" requires an argument.\n", argv[i - 1]);
 		};
-		auto error_invalid = [&]() {
-			print_error("A number must come after \"{}\" argument.\n", argv[i - 1]);
-		};
-		auto error_range = [&]() {
-			print_error("Provided number \"{}\" for argument \"{}\" is too big.\n", argv[i], argv[i - 1]);
+
+		int error;
+
+		auto stoi_check_error = [&](int error) {
+			if (error == EINVAL) {
+				print_error("A number must come after \"{}\" argument.\n", argv[i - 1]);
+			} else if (error == ERANGE) {
+				print_error("Provided number \"{}\" for argument \"{}\" is too big.\n", argv[i], argv[i - 1]);
+			}
 		};
 
 		for (; i < argc; ++i) {
@@ -222,23 +225,27 @@ int main(int argc, char** argv) {
 					if (!arg_next) {
 						missing_arg();
 					}
-					stoi_wrapper((*arg_next).data(), &header.interleave, error_invalid, error_range);
+					error = stoi_wrapper((*arg_next).data(), &header.interleave);
+					stoi_check_error(error);
 				}
 			} else if (arg == "--version" || arg == "-v") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				stoi_wrapper((*arg_next).data(), &header.version, error_invalid, error_range);
+				error = stoi_wrapper((*arg_next).data(), &header.version);
+				stoi_check_error(error);
 			} else if (arg == "--sample_rate" || arg == "-sr") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				stoi_wrapper((*arg_next).data(), &header.sample_rate, error_invalid, error_range);
+				error = stoi_wrapper((*arg_next).data(), &header.sample_rate);
+				stoi_check_error(error);
 			} else if (arg == "--channels" || arg == "-c") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				stoi_wrapper((*arg_next).data(), &header.overlap.v3_num_channels, error_invalid, error_range);
+				error = stoi_wrapper((*arg_next).data(), &header.overlap.v3_num_channels);
+				stoi_check_error(error);
 			} else if (arg == "--name") {
 				if (!arg_next) {
 					missing_arg();
