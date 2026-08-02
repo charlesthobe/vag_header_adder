@@ -76,7 +76,7 @@ std::errc from_chars_wrapper(std::string_view str, T& output) {
 	}
 
 	auto [ptr, ec] = std::from_chars(data.data(), data.data() + data.size(), output, base);
-	if (ptr && *ptr != 0) {
+	if (ec == std::errc{} && ptr != data.data() + data.size()) {
 		return std::errc::invalid_argument;
 	}
 	return ec;
