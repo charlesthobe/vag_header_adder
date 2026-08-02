@@ -61,12 +61,16 @@ concept uint_or_less_type = std::unsigned_integral<T> && sizeof(T) <= sizeof(int
 template<uint_or_less_type T>
 int stoi_wrapper (const char* cstring, T* output) {
 	uint32_t value;
+	size_t invalid_char_idx = 0;
 	try {
-		value = std::bit_cast<uint32_t>(std::stoi(cstring, nullptr, 0));
+		value = std::bit_cast<uint32_t>(std::stoi(cstring, &invalid_char_idx, 0));
 	} catch (std::invalid_argument&) {
 		return EINVAL;
 	} catch (std::out_of_range&) {
 		return ERANGE;
+	}
+	if (cstring[invalid_char_idx] != 0) {
+		return EINVAL;
 	}
 	if (value > std::numeric_limits<T>::max()) {
 		return ERANGE;
