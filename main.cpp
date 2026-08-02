@@ -55,10 +55,8 @@ template <typename... T>
 	std::exit(EXIT_FAILURE);
 }
 
-template <typename T>
-concept uint_or_less_type = std::unsigned_integral<T> && sizeof(T) <= sizeof(int32_t);
-
-template<uint_or_less_type T>
+template<typename T>
+	requires std::unsigned_integral<T> && (sizeof(T) <= sizeof(int32_t))
 int stoi_wrapper (const char* cstring, T* output) {
 	uint32_t value;
 	size_t invalid_char_idx = 0;
