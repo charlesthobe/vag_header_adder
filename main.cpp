@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <charconv>
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
@@ -57,24 +58,28 @@ template <typename... T>
 
 template<typename T>
 	requires std::unsigned_integral<T> && (sizeof(T) <= sizeof(int32_t))
-int stoi_wrapper (const char* cstring, T* output) {
-	uint32_t value;
-	size_t invalid_char_idx = 0;
-	try {
-		value = std::bit_cast<uint32_t>(std::stoi(cstring, &invalid_char_idx, 0));
-	} catch (std::invalid_argument&) {
-		return EINVAL;
-	} catch (std::out_of_range&) {
-		return ERANGE;
+std::errc from_chars_wrapper(std::string_view str, T& output) {
+	int base;
+	std::string_view data;
+	if (str.starts_with("0x") || str.starts_with("0X")) {
+		base = 16;
+		data = str.substr(2);
+	} else if (str.starts_with("0b") || str.starts_with("0B")) {
+		base = 2;
+		data = str.substr(2);
+	} else if (str.starts_with("0") && str.length() > 1) {
+		base = 8;
+		data = str.substr(1);
+	} else {
+		base = 10;
+		data = str;
 	}
-	if (cstring[invalid_char_idx] != 0) {
-		return EINVAL;
+
+	auto [ptr, ec] = std::from_chars(data.data(), data.data() + data.size(), output, base);
+	if (ptr && *ptr != 0) {
+		return std::errc::invalid_argument;
 	}
-	if (value > std::numeric_limits<T>::max()) {
-		return ERANGE;
-	}
-	*output = static_cast<T>(value);
-	return EXIT_SUCCESS;
+	return ec;
 }
 
 void proceed_question(const char* message) {
@@ -161,18 +166,20 @@ int main(int argc, char** argv) {
 			print_error("Last option \"{}\" requires an argument.\n", argv[i - 1]);
 		};
 
-		int error;
+		std::errc error;
 
-		auto stoi_check_error = [&](int error) {
+		auto from_chars_check_error = [&](std::errc error) {
 			std::string concat;
 			if (std::string_view{argv[i - 1]} == "i") {
 				concat = std::string{argv[i - 2]} + " " + argv[i - 1];
 				argv[i - 1] = concat.data();
 			}
-			if (error == EINVAL) {
+			if (error == std::errc::invalid_argument) {
 				print_error("A number must come after \"{}\" argument/s.\n", argv[i - 1]);
-			} else if (error == ERANGE) {
+			} else if (error == std::errc::result_out_of_range) {
 				print_error("Provided number \"{}\" for argument/s \"{}\" is too big.\n", argv[i], argv[i - 1]);
+			} else if (error != std::errc{}) {
+				print_error("Unkown error when parsing the argument after \"{}\"\n", argv[i - 1]);
 			}
 		};
 
@@ -232,27 +239,27 @@ int main(int argc, char** argv) {
 					if (!arg_next) {
 						missing_arg();
 					}
-					error = stoi_wrapper((*arg_next).data(), &header.interleave);
-					stoi_check_error(error);
+					error = from_chars_wrapper((*arg_next).data(), header.interleave);
+					from_chars_check_error(error);
 				}
 			} else if (arg == "--version" || arg == "-v") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				error = stoi_wrapper((*arg_next).data(), &header.version);
-				stoi_check_error(error);
+				error = from_chars_wrapper((*arg_next).data(), header.version);
+				from_chars_check_error(error);
 			} else if (arg == "--sample_rate" || arg == "-sr") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				error = stoi_wrapper((*arg_next).data(), &header.sample_rate);
-				stoi_check_error(error);
+				error = from_chars_wrapper((*arg_next).data(), header.sample_rate);
+				from_chars_check_error(error);
 			} else if (arg == "--channels" || arg == "-c") {
 				if (!arg_next) {
 					missing_arg();
 				}
-				error = stoi_wrapper((*arg_next).data(), &header.overlap.v3_num_channels);
-				stoi_check_error(error);
+				error = from_chars_wrapper((*arg_next).data(), header.overlap.v3_num_channels);
+				from_chars_check_error(error);
 			} else if (arg == "--name") {
 				if (!arg_next) {
 					missing_arg();
