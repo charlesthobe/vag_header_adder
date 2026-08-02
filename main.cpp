@@ -162,10 +162,15 @@ int main(int argc, char** argv) {
 		int error;
 
 		auto stoi_check_error = [&](int error) {
+			std::string concat;
+			if (std::string_view{argv[i - 1]} == "i") {
+				concat = std::string{argv[i - 2]} + " " + argv[i - 1];
+				argv[i - 1] = concat.data();
+			}
 			if (error == EINVAL) {
-				print_error("A number must come after \"{}\" argument.\n", argv[i - 1]);
+				print_error("A number must come after \"{}\" argument/s.\n", argv[i - 1]);
 			} else if (error == ERANGE) {
-				print_error("Provided number \"{}\" for argument \"{}\" is too big.\n", argv[i], argv[i - 1]);
+				print_error("Provided number \"{}\" for argument/s \"{}\" is too big.\n", argv[i], argv[i - 1]);
 			}
 		};
 
