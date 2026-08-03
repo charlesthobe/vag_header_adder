@@ -2,14 +2,12 @@
 #include <array>
 #include <bit>
 #include <charconv>
-#include <cerrno>
 #include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <iostream>
-#include <limits>
 #include <optional>
 #include <print>
 #include <string>
@@ -103,7 +101,7 @@ struct vag_header {
 	char magic[4] = {'V', 'A', 'G', 'p'}; // 0x00 - 0x03
 	uint32_t version = 0x20; //0x04 - 0x07
 	uint32_t interleave = 0; // 0x08 - 0x0B Little-endian unlike the reset
-	uint32_t channel_size = 0; // 0x0C -0x0F
+	uint32_t channel_size = 0; // 0x0C - 0x0F
 	uint32_t sample_rate = 44100; // 0x10 - 0x13
 	// Version 2, 3, 0x20001 and 0x30000 stuff
 	std::array<uint8_t, 2> v2_vol_left = {}; // 0x14 - 0x15
