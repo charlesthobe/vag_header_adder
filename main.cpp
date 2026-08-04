@@ -262,8 +262,12 @@ int main(int argc, char** argv) {
 				if (!arg_next) {
 					missing_arg();
 				}
-				if (std::strlen((*arg_next).data()) <= 16) {
-					std::strcpy(header.name, (*arg_next).data());
+				auto name_length = std::strlen((*arg_next).data());
+				if (name_length == 0x10) {
+					std::print("Warning: chosen name is exactly 16 characters, recommended length is 15 characters or less.\n");
+				}
+				if (name_length <= 0x10) {
+					std::strncpy(header.name, (*arg_next).data(), 0x10);
 				} else {
 					print_error("Name cannot be longer than 16 ASCII characters.\n");
 				}
@@ -404,7 +408,7 @@ int main(int argc, char** argv) {
 			, header.channel_size
 			, header.channel_size * num_channels // Data size
 			, sizeof(header) + padding_size // Data start offset
-			, header.name
+			, std::string_view{header.name, 0x10}
 			);
 		return EXIT_SUCCESS;
 	}
