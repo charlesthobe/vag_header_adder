@@ -55,7 +55,7 @@ template <typename... T>
 }
 
 template<typename T>
-	requires std::unsigned_integral<T> && (sizeof(T) <= sizeof(int32_t))
+	requires std::unsigned_integral<T>
 std::errc from_chars_wrapper(std::string_view str, T& output) {
 	int base;
 	std::string_view data;
