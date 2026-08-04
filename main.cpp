@@ -150,7 +150,7 @@ int main(int argc, char** argv) {
 				if (argc != 3) {
 					print_error("Usage of probe mode is: {} probe <file>\n", argv[0]);
 				}
-				input = argv[i + 1];
+				input = argv[2];
 				i = argc;
 			} else if (std::string_view{argv[1]} == "reverse") {
 				reverse_mode = true;
